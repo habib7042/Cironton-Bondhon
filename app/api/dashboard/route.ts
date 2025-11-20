@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import pool from '../../../lib/db';
+import pool from '@/lib/db';
 
 export async function GET(request: Request) {
   try {
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       balance: parseFloat(userResult.rows[0].balance),
-      transactions: txResult.rows.map(row => ({
+      transactions: txResult.rows.map((row: any) => ({
         id: row.id,
         transaction_type: row.transaction_type,
         amount: parseFloat(row.amount),
