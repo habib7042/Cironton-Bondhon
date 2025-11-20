@@ -13,5 +13,6 @@
 }
 
 body {
-  @apply bg-nova-900 text-white h-screen overflow-hidden selection:bg-nova-accent selection:text-nova-900;
+  /* Changed h-screen to min-h-screen and overflow-hidden to overflow-y-auto to allow scrolling */
+  @apply bg-nova-900 text-white min-h-screen overflow-y-auto selection:bg-nova-accent selection:text-nova-900;
 }
