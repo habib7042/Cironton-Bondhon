@@ -28,27 +28,38 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminTabOverride, setAdminTabOverride] = useState<'REQUESTS' | 'MEMBERS'>('REQUESTS');
 
+  // REAL-TIME UPDATE LOGIC
   useEffect(() => {
+    // 1. Initial Fetch
     fetchData();
-  }, []);
 
-  // Refresh data when Admin Panel is closed to show updated approvals immediately
-  useEffect(() => {
-      if (!showAdminPanel) {
-          fetchData();
-      }
-  }, [showAdminPanel]);
+    // 2. Set up Polling (Every 5 seconds)
+    const intervalId = setInterval(() => {
+        // Only fetch if the user has a token and is not currently viewing the Admin Panel
+        // (Admin Panel has its own internal state management)
+        if (user.token && !showAdminPanel) {
+            fetchData(true); // Pass true to indicate background fetch
+        }
+    }, 5000);
 
-  const fetchData = async () => {
+    // 3. Cleanup on unmount
+    return () => clearInterval(intervalId);
+  }, [user.token, showAdminPanel]);
+
+  const fetchData = async (isBackground = false) => {
       if (!user.token) {
           setIsLoading(false);
           return;
       }
-      // Don't set full loading screen on refresh, just background update if already loaded
-      if (transactions.length === 0) setIsLoading(true);
+      
+      // Only show full-screen loader on the very first load
+      // If we have transactions already (background update), keep UI interactive
+      if (!isBackground && transactions.length === 0) setIsLoading(true);
       
       try {
           const data = await api.getDashboardData(user.token);
+          
+          // Update Balance & Fund Stats
           setUser(prev => ({ ...prev, balance: parseFloat(data.balance) }));
           setTotalFund(data.totalGroupBalance || 0);
           
@@ -73,7 +84,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
       } catch (e) {
           console.error("Error loading dashboard", e);
       } finally {
-          setIsLoading(false);
+          if (!isBackground) setIsLoading(false);
       }
   };
 
@@ -90,7 +101,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
             await api.createTransaction(user.token, type, amount);
         }
         
-        // Refresh data
+        // Immediate refresh after user action
         await fetchData();
     } catch (e: any) {
         // Pass error to be handled by modal
@@ -108,7 +119,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
       } else if (action === 'id_card') {
           setFeatureModal('id_card');
       } else if (action === 'reports') {
-          setFeatureModal('reports'); // Will trigger logic in FeatureModal
+          setFeatureModal('reports'); 
       }
   };
 
@@ -160,7 +171,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
     { icon: UserCog, label: 'Members', id: 'member_mgmt', desc: 'Manage Users' },
     { icon: Wallet, label: 'Balances', id: 'balance_mgmt', desc: 'Fund Overview' },
     { icon: IdCard, label: 'ID Cards', id: 'id_card', desc: 'Generate IDs' },
-    // { icon: FileText, label: 'Reports', id: 'reports', desc: 'Full Statement' }, // Moved logic to FeatureModal or handled differently
   ];
 
   return (
@@ -277,10 +287,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
             )}
         </section>
 
-        {/* Transactions */}
+        {/* Transactions - LIVE UPDATING */}
         <section>
             <div className="flex justify-between items-end mb-4">
-                <h3 className="text-xl font-semibold text-white">Requests & History</h3>
+                <h3 className="text-xl font-semibold text-white flex items-center gap-2">
+                    Requests & History 
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                </h3>
             </div>
             
             <div className="bg-nova-800/30 border border-white/5 rounded-3xl overflow-hidden backdrop-blur-sm min-h-[200px]">
