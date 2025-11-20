@@ -2,6 +2,8 @@
 import { NextResponse } from 'next/server';
 import pool from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 // GET: List all members
 export async function GET(request: Request) {
   try {
