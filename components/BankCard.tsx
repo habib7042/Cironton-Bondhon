@@ -11,9 +11,13 @@ interface BankCardProps {
 export const BankCard: React.FC<BankCardProps> = ({ user, totalFund = 0 }) => {
   const [showBalance, setShowBalance] = useState(true);
   
-  // Mock Member ID
-  const memberId = "MEM-829-1034";
+  // Generate a Member ID based on user data or fallback
+  const memberId = user.id.length > 8 ? `MEM-${user.id.substring(0, 4)}-${user.id.substring(4, 8)}`.toUpperCase() : "MEM-829-1034";
   
+  // Logic: Members see their own balance, Admins see total fund
+  const displayLabel = user.isAdmin ? "Total Bank Amount" : "My Contribution";
+  const displayAmount = user.isAdmin ? totalFund : user.balance;
+
   return (
     <div className="w-full aspect-[1.586] rounded-3xl relative overflow-hidden transition-all duration-500 hover:scale-[1.01] shadow-2xl shadow-emerald-900/50 group perspective-1000">
       {/* Card Background & Texture */}
@@ -54,10 +58,10 @@ export const BankCard: React.FC<BankCardProps> = ({ user, totalFund = 0 }) => {
 
         {/* Middle: Balance */}
         <div className="flex flex-col justify-center flex-1 mt-4">
-             <span className="text-xs text-emerald-100/80 font-medium mb-1 uppercase tracking-wider">Total Bank Amount</span>
+             <span className="text-xs text-emerald-100/80 font-medium mb-1 uppercase tracking-wider">{displayLabel}</span>
              <div className="flex items-center gap-3">
                 <span className={`text-3xl sm:text-4xl font-bold tracking-tight ${showBalance ? '' : 'blur-md select-none'}`}>
-                   {showBalance ? `৳${totalFund.toLocaleString()}` : '৳ •••••••'}
+                   {showBalance ? `৳${displayAmount.toLocaleString()}` : '৳ •••••••'}
                 </span>
                 <button 
                   onClick={() => setShowBalance(!showBalance)}

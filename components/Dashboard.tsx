@@ -214,8 +214,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
             {!user.isAdmin && (
                 <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="bg-nova-800/50 rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
-                        <span className="text-xs text-slate-400 mb-1">Your Contribution</span>
-                        <span className="text-lg font-bold text-emerald-400">৳{user.balance.toLocaleString()}</span>
+                        <span className="text-xs text-slate-400 mb-1">Total Group Fund</span>
+                        <span className="text-lg font-bold text-emerald-400">৳{totalFund.toLocaleString()}</span>
                     </div>
                     <div className="bg-nova-800/50 rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
                         <span className="text-xs text-slate-400 mb-1">Active Members</span>
