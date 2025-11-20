@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import pool from '../../../lib/db';
+import pool from '@/lib/db';
 
 // GET: List all members
 export async function GET(request: Request) {

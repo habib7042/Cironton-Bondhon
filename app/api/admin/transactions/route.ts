@@ -1,5 +1,6 @@
+
 import { NextResponse } from 'next/server';
-import pool from '../../../lib/db';
+import pool from '@/lib/db';
 
 // GET: Fetch all pending transactions with User details
 export async function GET(request: Request) {
