@@ -341,8 +341,6 @@ export const api = {
         // Add to mock list dynamically
         MOCK_MEMBERS_LIST.push({
             id: `mock-user-${Math.random()}`,
-            name: data.name,
-            phoneNumber: data.phoneNumber,
             balance: 0,
             ...data
         });
