@@ -159,8 +159,12 @@ export const api = {
   getDashboardData: async (token: string) => {
     if (token.startsWith('mock-')) {
         await delay(600);
+        // Calculate dynamic total from mock members
+        const totalMockBalance = MOCK_MEMBERS_LIST.reduce((sum, m) => sum + (m.balance || 0), 0);
+        
         return {
             balance: token === 'mock-admin-token' ? MOCK_ADMIN.balance : MOCK_USER.balance,
+            totalGroupBalance: totalMockBalance,
             transactions: MOCK_TRANSACTIONS
         };
     }
@@ -179,8 +183,11 @@ export const api = {
       return await response.json();
     } catch (error) {
        console.warn("Dashboard fetch failed, using mock data", error);
+       // Calculate dynamic total from mock members
+       const totalMockBalance = MOCK_MEMBERS_LIST.reduce((sum, m) => sum + (m.balance || 0), 0);
        return {
             balance: MOCK_USER.balance,
+            totalGroupBalance: totalMockBalance,
             transactions: MOCK_TRANSACTIONS
         };
     }
@@ -310,9 +317,22 @@ export const api = {
                   const amt = typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount;
                   if (tx.transaction_type === 'DEPOSIT') {
                       MOCK_USER.balance = (parseFloat(MOCK_USER.balance) + amt).toFixed(2);
+                      // Update member list too
+                      const member = MOCK_MEMBERS_LIST.find(m => m.id === tx.userId);
+                      if (member) member.balance += amt;
                   } else {
                       MOCK_USER.balance = (parseFloat(MOCK_USER.balance) - amt).toFixed(2);
+                      const member = MOCK_MEMBERS_LIST.find(m => m.id === tx.userId);
+                      if (member) member.balance -= amt;
                   }
+              } else {
+                   // For other mock users
+                   const member = MOCK_MEMBERS_LIST.find(m => m.id === tx.userId);
+                   if (member) {
+                       const amt = typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount;
+                       if (tx.transaction_type === 'DEPOSIT') member.balance += amt;
+                       else member.balance -= amt;
+                   }
               }
           } else {
                if (userTx) userTx.status = 'REJECTED';

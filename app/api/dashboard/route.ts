@@ -15,10 +15,16 @@ export async function GET(request: Request) {
     }
 
     const userResult = await pool.query('SELECT balance FROM users WHERE id = $1', [userId]);
+    
+    // Fetch User Transactions
     const txResult = await pool.query(
       'SELECT id, transaction_type, amount, status, created_at FROM transactions WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
+
+    // Calculate Total Group Fund (Sum of all user balances)
+    const totalFundResult = await pool.query('SELECT SUM(balance) as total FROM users');
+    const totalGroupBalance = parseFloat(totalFundResult.rows[0]?.total || '0');
 
     if (userResult.rows.length === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -26,6 +32,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       balance: parseFloat(userResult.rows[0].balance),
+      totalGroupBalance: totalGroupBalance,
       transactions: txResult.rows.map((row: any) => ({
         id: row.id,
         transaction_type: row.transaction_type,

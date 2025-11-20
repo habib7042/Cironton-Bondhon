@@ -18,6 +18,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
   const [user, setUser] = useState(initialUser);
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [totalFund, setTotalFund] = useState(0); // New state for real total fund
+
   const [modalConfig, setModalConfig] = useState<{isOpen: boolean, type: 'deposit' | 'withdraw' | 'transfer'}>({
     isOpen: false,
     type: 'deposit'
@@ -30,15 +32,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
     fetchData();
   }, []);
 
+  // Refresh data when Admin Panel is closed to show updated approvals immediately
+  useEffect(() => {
+      if (!showAdminPanel) {
+          fetchData();
+      }
+  }, [showAdminPanel]);
+
   const fetchData = async () => {
       if (!user.token) {
           setIsLoading(false);
           return;
       }
-      setIsLoading(true);
+      // Don't set full loading screen on refresh, just background update if already loaded
+      if (transactions.length === 0) setIsLoading(true);
+      
       try {
           const data = await api.getDashboardData(user.token);
           setUser(prev => ({ ...prev, balance: parseFloat(data.balance) }));
+          setTotalFund(data.totalGroupBalance || 0);
           
           // Map Backend Transactions to Frontend UI safely
           if (Array.isArray(data.transactions)) {
@@ -126,14 +138,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
       );
   }
 
-  // Mock Group Stats
-  const groupTotal = 500000 + user.balance; 
-  const totalMembers = 12;
+  const totalMembers = 12; // Keep static or fetch from API if needed
 
   const contextForAi = `
     User: ${user.name}
     My Contribution: ৳${user.balance.toLocaleString()}
-    Group Fund Total: ৳${groupTotal.toLocaleString()}
+    Group Fund Total: ৳${totalFund.toLocaleString()}
     Total Members: ${totalMembers}
     Recent Activity: ${transactions.map(t => `${t.merchant} (${t.status})`).join(', ')}
   `;
@@ -187,7 +197,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
         {/* Card Section */}
         <section className="animate-slide-up">
             <div className="mb-6">
-                <BankCard user={user} totalFund={groupTotal} />
+                <BankCard user={user} totalFund={totalFund} />
             </div>
 
             {/* Group Stats - Only show for Members or if Admin wants to see it */}
