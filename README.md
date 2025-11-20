@@ -1,11 +1,39 @@
-<div align="center">
+# Friends Fund
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+A community savings application ("Samity" style) built with Next.js, Tailwind CSS, and Neon (PostgreSQL).
 
-  <h1>Built with AI Studio</h2>
+## Features
+- **Group Savings:** View collective fund stats.
+- **Transactions:** Deposit and Withdraw requests.
+- **Admin Panel:** Approve or reject member requests.
+- **AI Assistant:** "Shonali" (Gemini-powered) for help.
+- **Secure Login:** Phone + PIN authentication.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## Setup
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-</div>
+2. **Environment Variables:**
+   Create a `.env.local` file:
+   ```env
+   DATABASE_URL=postgres://user:password@host/neondb?sslmode=require
+   API_KEY=your_gemini_api_key
+   ```
+
+3. **Database Setup:**
+   Run the SQL commands in `db/schema.sql` in your Neon console.
+
+4. **Run Locally:**
+   ```bash
+   npm run dev
+   ```
+
+## Tech Stack
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- PostgreSQL (Neon)
+- Google Gemini AI
