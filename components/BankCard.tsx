@@ -1,17 +1,18 @@
+
 import React, { useState } from 'react';
 import { Wallet, Copy, Eye, EyeOff, Users } from 'lucide-react';
 import { User } from '../types';
 
 interface BankCardProps {
   user: User;
+  totalFund?: number;
 }
 
-export const BankCard: React.FC<BankCardProps> = ({ user }) => {
+export const BankCard: React.FC<BankCardProps> = ({ user, totalFund = 0 }) => {
   const [showBalance, setShowBalance] = useState(true);
   
   // Mock Member ID
   const memberId = "MEM-829-1034";
-  const joined = "01/24";
   
   return (
     <div className="w-full aspect-[1.586] rounded-3xl relative overflow-hidden transition-all duration-500 hover:scale-[1.01] shadow-2xl shadow-emerald-900/50 group perspective-1000">
@@ -45,7 +46,7 @@ export const BankCard: React.FC<BankCardProps> = ({ user }) => {
             </div>
             <div>
                 <h3 className="font-bold tracking-wide text-lg leading-none">চিরন্তন বন্ধন</h3>
-                <span className="text-[10px] uppercase tracking-widest opacity-80">Savings Member</span>
+                <span className="text-[10px] uppercase tracking-widest opacity-80">Friends Fund Samity</span>
             </div>
           </div>
           <Wallet size={24} className="opacity-60" />
@@ -53,10 +54,10 @@ export const BankCard: React.FC<BankCardProps> = ({ user }) => {
 
         {/* Middle: Balance */}
         <div className="flex flex-col justify-center flex-1 mt-4">
-             <span className="text-xs text-emerald-100/80 font-medium mb-1 uppercase tracking-wider">Your Total Contribution</span>
+             <span className="text-xs text-emerald-100/80 font-medium mb-1 uppercase tracking-wider">Total Bank Amount</span>
              <div className="flex items-center gap-3">
                 <span className={`text-3xl sm:text-4xl font-bold tracking-tight ${showBalance ? '' : 'blur-md select-none'}`}>
-                   {showBalance ? `৳${user.balance.toLocaleString()}` : '৳ •••••••'}
+                   {showBalance ? `৳${totalFund.toLocaleString()}` : '৳ •••••••'}
                 </span>
                 <button 
                   onClick={() => setShowBalance(!showBalance)}
