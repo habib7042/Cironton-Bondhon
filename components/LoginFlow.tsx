@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { ArrowRight, Smartphone, AlertCircle, PiggyBank, Users, ShieldCheck, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, Smartphone, AlertCircle, Bird, Users } from 'lucide-react';
 import { AuthStep, User as UserType } from '../types';
 import { Button } from './Button';
 import { NumPad } from './NumPad';
@@ -17,6 +17,18 @@ export const LoginFlow: React.FC<LoginFlowProps> = ({ onSuccess }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Safety timeout to prevent infinite loading spinner in UI
+  useEffect(() => {
+      if (isLoading) {
+          const timeout = setTimeout(() => {
+              setIsLoading(false);
+              setError("Connection timed out. Please try again.");
+              setPin('');
+          }, 5000); // 5s max wait time before forced reset
+          return () => clearTimeout(timeout);
+      }
+  }, [isLoading]);
 
   const handlePhoneSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -46,6 +58,8 @@ export const LoginFlow: React.FC<LoginFlowProps> = ({ onSuccess }) => {
 
   const verifyPin = async (code: string) => {
     setIsLoading(true);
+    setError('');
+    
     try {
         const user = await api.login(phoneNumber, code);
         setStep(AuthStep.SUCCESS);
@@ -53,8 +67,8 @@ export const LoginFlow: React.FC<LoginFlowProps> = ({ onSuccess }) => {
             onSuccess(user);
         }, 1000);
     } catch (err: any) {
-        console.error("Login failed", err);
-        setError(err.message === 'Invalid credentials' ? 'Incorrect PIN' : 'Login failed. Please try again.');
+        console.error("Login error caught in UI:", err);
+        setError(err.message === 'Invalid credentials' ? 'Incorrect PIN' : 'Login failed. Check connection.');
         setPin('');
     } finally {
         setIsLoading(false);
@@ -166,7 +180,7 @@ export const LoginFlow: React.FC<LoginFlowProps> = ({ onSuccess }) => {
                         setStep(AuthStep.PHONE);
                         setPin('');
                         setError('');
-                        setIsLoading(false); // Ensure loading is reset
+                        setIsLoading(false); 
                     }}
                     className="mt-8 text-sm text-slate-400 hover:text-white transition-colors cursor-pointer"
                 >
@@ -179,7 +193,7 @@ export const LoginFlow: React.FC<LoginFlowProps> = ({ onSuccess }) => {
             <div className="absolute inset-0 flex items-center justify-center z-50 animate-fade-in bg-nova-900">
                 <div className="flex flex-col items-center">
                     <div className="w-24 h-24 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6">
-                        <PiggyBank className="text-emerald-500 animate-bounce" size={48} />
+                        <Bird className="text-emerald-500 animate-bounce" size={48} />
                     </div>
                     <h2 className="text-2xl font-bold text-white">Access Granted</h2>
                     <p className="text-slate-400 mt-2">Syncing with server...</p>

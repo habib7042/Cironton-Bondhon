@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, X, Send, Sparkles } from 'lucide-react';
 import { getFinancialAdvice, getLoginHelp } from '../services/geminiService';
@@ -15,8 +16,8 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ contextData = '', mode
     { 
       role: 'model', 
       text: mode === 'LOGIN_HELP' 
-        ? "Having trouble logging in? I can explain our security features or help with account recovery." 
-        : "Nomoshkar! I'm Shonali. Ask me about your spending or for financial tips in Bangladesh." 
+        ? "Assalamu Alaikum! Having trouble logging in? I can help you access your account securely." 
+        : "Assalamu Alaikum! I'm Shonali. Ask me about your savings or for financial advice." 
     }
   ]);
   const [isThinking, setIsThinking] = useState(false);
@@ -94,7 +95,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ contextData = '', mode
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Ask something in English or Banglish..."
+                placeholder="Ask something..."
                 className="flex-1 bg-nova-900 border border-nova-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-nova-accent focus:ring-1 focus:ring-nova-accent transition-all placeholder:text-slate-500"
               />
               <button 
