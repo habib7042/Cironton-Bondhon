@@ -2,108 +2,8 @@ import { User, Transaction, MemberFormData } from '../types';
 
 const API_URL = '/api'; // Relative path for Next.js API routes
 
-// --- MOCK DATA FOR OFFLINE/DEMO MODE ---
-const MOCK_USER = {
-  id: 'mock-user-1',
-  name: 'Shakib Al Hasan',
-  balance: '12500.00',
-  isAdmin: false,
-  profileImage: ''
-};
-
-const MOCK_ADMIN = {
-  id: 'mock-admin-1',
-  name: 'System Admin',
-  balance: '0.00',
-  isAdmin: true,
-  profileImage: ''
-};
-
-let MOCK_TRANSACTIONS = [
-  {
-    id: 101,
-    transaction_type: 'DEPOSIT',
-    amount: '5000.00',
-    status: 'APPROVED',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString()
-  },
-  {
-    id: 102,
-    transaction_type: 'WITHDRAW',
-    amount: '2000.00',
-    status: 'PENDING',
-    created_at: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: 103,
-    transaction_type: 'DEPOSIT',
-    amount: '1000.00',
-    status: 'APPROVED',
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString()
-  }
-];
-
-// Mock Pending Requests for Admin View
-let MOCK_PENDING_REQUESTS = [
-    { id: 201, transaction_type: 'DEPOSIT', amount: 500, status: 'PENDING', created_at: new Date().toISOString(), userName: 'Karim Benzema', userId: 'mock-user-2' },
-    { id: 202, transaction_type: 'WITHDRAW', amount: 200, status: 'PENDING', created_at: new Date().toISOString(), userName: 'Lionel Messi', userId: 'mock-user-3' },
-    { id: 203, transaction_type: 'DEPOSIT', amount: 5000, status: 'PENDING', created_at: new Date().toISOString(), userName: 'Shakib Al Hasan', userId: 'mock-user-1' }, 
-];
-
-const MOCK_MEMBERS_LIST = [
-    {
-        id: 'mock-user-1',
-        name: 'Shakib Al Hasan',
-        phoneNumber: '01712345678',
-        balance: 12500.00,
-        fatherName: 'Masroor Reza',
-        motherName: 'Shirin Reza',
-        nid: '1987567890123',
-        dob: '1987-03-24',
-        address: 'Magura, Bangladesh',
-        nomineeName: 'Umme Ahmed Shishir',
-        nomineeNid: '1990123456789'
-    },
-    {
-        id: 'mock-user-2',
-        name: 'Tamim Iqbal',
-        phoneNumber: '01700000001',
-        balance: 8500.00,
-        fatherName: 'Iqbal Khan',
-        motherName: 'Nusrat Iqbal',
-        nid: '1989123456789',
-        dob: '1989-03-20',
-        address: 'Chittagong, Bangladesh',
-        nomineeName: 'Ayesha Siddiqa',
-        nomineeNid: '1992123456789'
-    }
-];
-
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const api = {
   login: async (phoneNumber: string, pin: string): Promise<User> => {
-    // 1. FAST PATH: Explicitly handle Demo Accounts immediately to bypass network/DB cold starts
-    if (pin === '1234') {
-        if (phoneNumber === '01799999999') {
-            await delay(500);
-            return { ...MOCK_ADMIN, phoneNumber, balance: parseFloat(MOCK_ADMIN.balance), token: 'mock-admin-token' };
-        }
-        if (phoneNumber === '01712345678') {
-            await delay(500);
-            return { 
-                id: MOCK_USER.id, 
-                name: MOCK_USER.name, 
-                phoneNumber, 
-                balance: parseFloat(MOCK_USER.balance), 
-                token: 'mock-token-demo', 
-                isAdmin: false,
-                profileImage: MOCK_USER.profileImage
-            };
-        }
-    }
-
-    // 2. NETWORK PATH: Try real login with strict 2.5s timeout
     try {
       const fetchPromise = fetch(`${API_URL}/login`, {
         method: 'POST',
@@ -111,16 +11,15 @@ export const api = {
         body: JSON.stringify({ phoneNumber, pin }),
       });
 
+      // Strict 5s timeout for login
       const timeoutPromise = new Promise<Response>((_, reject) => 
-        setTimeout(() => reject(new Error('TIMEOUT')), 2500)
+        setTimeout(() => reject(new Error('TIMEOUT')), 5000)
       );
 
       const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) {
-         // If 401, it's legitimate Invalid Credentials
          if (response.status === 401) throw new Error('Invalid credentials');
-         // Any other error (404, 500) triggers fallback
          throw new Error('Server error'); 
       }
 
@@ -135,113 +34,47 @@ export const api = {
         profileImage: data.user.profileImage
       };
     } catch (error: any) {
-      
-      // If it's a wrong PIN, rethrow so UI shows "Incorrect PIN"
       if (error.message === 'Invalid credentials') {
           throw error;
       }
-
-      console.warn("API unreachable or timeout. Switching to MOCK MODE.", error);
-      
-      // Fallback: If it looks like a valid number/pin, let them in as Demo User
-      if (phoneNumber.length >= 11 && pin.length === 4) {
-          await delay(300); // Small UX delay
-          return {
-            id: MOCK_USER.id,
-            name: MOCK_USER.name,
-            phoneNumber: phoneNumber,
-            balance: parseFloat(MOCK_USER.balance),
-            token: 'mock-token-demo', 
-            isAdmin: false,
-            profileImage: MOCK_USER.profileImage
-          };
-      }
-      throw error;
+      console.error("Login failed", error);
+      throw new Error("Connection failed. Please check your internet.");
     }
   },
 
   getDashboardData: async (token: string) => {
-    if (token.startsWith('mock-')) {
-        await delay(600);
-        // Calculate dynamic total from mock members
-        const totalMockBalance = MOCK_MEMBERS_LIST.reduce((sum, m) => sum + (m.balance || 0), 0);
-        
-        return {
-            balance: token === 'mock-admin-token' ? MOCK_ADMIN.balance : MOCK_USER.balance,
-            totalGroupBalance: totalMockBalance,
-            transactions: MOCK_TRANSACTIONS
-        };
-    }
-
     try {
-      const fetchPromise = fetch(`${API_URL}/dashboard`, {
+      const response = await fetch(`${API_URL}/dashboard`, {
         headers: { 'Authorization': `Token ${token}` },
       });
-      const timeoutPromise = new Promise<Response>((_, reject) => 
-        setTimeout(() => reject(new Error('TIMEOUT')), 3000)
-      );
-      
-      const response = await Promise.race([fetchPromise, timeoutPromise]);
 
       if (!response.ok) throw new Error('Failed to fetch dashboard');
       return await response.json();
     } catch (error) {
-       console.warn("Dashboard fetch failed, using mock data", error);
-       // Calculate dynamic total from mock members
-       const totalMockBalance = MOCK_MEMBERS_LIST.reduce((sum, m) => sum + (m.balance || 0), 0);
-       return {
-            balance: MOCK_USER.balance,
-            totalGroupBalance: totalMockBalance,
-            transactions: MOCK_TRANSACTIONS
-        };
+       console.error("Dashboard fetch failed", error);
+       throw error;
     }
   },
 
   checkRecipient: async (token: string, phoneNumber: string) => {
-      // Mock logic
-      if (token.startsWith('mock-')) {
-          await delay(600);
-          const member = MOCK_MEMBERS_LIST.find(m => m.phoneNumber === phoneNumber);
-          if (member) return { name: member.name };
-          if (phoneNumber === '01700000000') return { name: 'Demo Receiver' };
-          throw new Error("Recipient not found");
-      }
-
-      // Real logic
-      try {
-        const response = await fetch(`${API_URL}/user/lookup`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Token ${token}`
-            },
-            body: JSON.stringify({ phoneNumber })
-        });
-        
-        if (!response.ok) throw new Error('Recipient not found');
-        return await response.json();
-      } catch (error) {
-        throw error;
-      }
+    try {
+      const response = await fetch(`${API_URL}/user/lookup`, {
+          method: 'POST',
+          headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${token}`
+          },
+          body: JSON.stringify({ phoneNumber })
+      });
+      
+      if (!response.ok) throw new Error('Recipient not found');
+      return await response.json();
+    } catch (error) {
+      throw error;
+    }
   },
 
   createTransaction: async (token: string, type: 'DEPOSIT' | 'WITHDRAW', amount: number) => {
-    if (token.startsWith('mock-')) {
-        await delay(800);
-        const newTx = {
-            id: Math.floor(Math.random() * 10000),
-            transaction_type: type,
-            amount: amount,
-            status: 'PENDING',
-            created_at: new Date().toISOString(),
-            userName: MOCK_USER.name,
-            userId: MOCK_USER.id
-        };
-        MOCK_PENDING_REQUESTS.push(newTx as any);
-        MOCK_TRANSACTIONS.unshift({ ...newTx, amount: amount.toFixed(2) } as any);
-        return newTx;
-    }
-
     try {
       const response = await fetch(`${API_URL}/transactions`, {
         method: 'POST',
@@ -260,35 +93,8 @@ export const api = {
   },
 
   transferMoney: async (token: string, recipientPhone: string, amount: number, pin: string) => {
-    // Note: In real app, you should verify PIN via API. 
-    // Here we rely on the component/modal flow for PIN or backend check.
-    
-    if (token.startsWith('mock-')) {
-        await delay(1000);
-        if (pin !== '1234') throw new Error('Incorrect PIN');
-
-        const currentBalance = parseFloat(MOCK_USER.balance);
-        if (currentBalance < amount) throw new Error('Insufficient balance');
-
-        const newBalance = (currentBalance - amount).toFixed(2);
-        MOCK_USER.balance = newBalance;
-        
-        const newTx = {
-            id: Math.floor(Math.random() * 10000),
-            transaction_type: 'TRANSFER',
-            amount: amount.toFixed(2),
-            status: 'APPROVED',
-            created_at: new Date().toISOString(),
-            userName: MOCK_USER.name,
-            userId: MOCK_USER.id,
-            recipientPhone: recipientPhone
-        };
-        MOCK_TRANSACTIONS.unshift(newTx as any);
-        return newTx;
-    }
-    
-    // Real implementation requires a transfer endpoint. 
-    // Reusing the transaction creation for now, but in production needs dedicated route.
+    // Note: In a real production app, verify PIN securely via API.
+    // For this version, we trust the client-side PIN entry flow in ActionModal before calling this.
     try {
         const response = await fetch(`${API_URL}/transactions`, {
             method: 'POST',
@@ -310,10 +116,6 @@ export const api = {
   },
 
   getPendingTransactions: async (token: string) => {
-      if (token === 'mock-admin-token') {
-          await delay(500);
-          return MOCK_PENDING_REQUESTS;
-      }
       try {
         const response = await fetch(`${API_URL}/admin/transactions`, {
             headers: { 'Authorization': `Token ${token}` }
@@ -321,39 +123,11 @@ export const api = {
         if (!response.ok) throw new Error('Failed to fetch');
         return await response.json();
       } catch (e) {
-          return MOCK_PENDING_REQUESTS; 
+          throw e;
       }
   },
 
   processTransaction: async (token: string, transactionId: string, action: 'APPROVE' | 'REJECT') => {
-      if (token === 'mock-admin-token') {
-          await delay(500);
-          const txIndex = MOCK_PENDING_REQUESTS.findIndex(t => t.id.toString() === transactionId);
-          if (txIndex === -1) return { success: false };
-          const tx = MOCK_PENDING_REQUESTS[txIndex];
-          const userTx = MOCK_TRANSACTIONS.find(t => t.id === tx.id);
-
-          if (action === 'APPROVE') {
-              if (userTx) userTx.status = 'APPROVED';
-              if (tx.userId === MOCK_USER.id) {
-                  const amt = typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount;
-                  if (tx.transaction_type === 'DEPOSIT') {
-                      MOCK_USER.balance = (parseFloat(MOCK_USER.balance) + amt).toFixed(2);
-                      const member = MOCK_MEMBERS_LIST.find(m => m.id === tx.userId);
-                      if (member) member.balance += amt;
-                  } else {
-                      MOCK_USER.balance = (parseFloat(MOCK_USER.balance) - amt).toFixed(2);
-                      const member = MOCK_MEMBERS_LIST.find(m => m.id === tx.userId);
-                      if (member) member.balance -= amt;
-                  }
-              }
-          } else {
-               if (userTx) userTx.status = 'REJECTED';
-          }
-          MOCK_PENDING_REQUESTS.splice(txIndex, 1);
-          return { success: true };
-      }
-
       const response = await fetch(`${API_URL}/admin/transactions`, {
           method: 'POST',
           headers: { 
@@ -367,16 +141,6 @@ export const api = {
   },
 
   addMember: async (token: string, data: MemberFormData) => {
-    if (token === 'mock-admin-token') {
-        await delay(1000);
-        MOCK_MEMBERS_LIST.push({
-            id: `mock-user-${Math.random()}`,
-            balance: 0,
-            ...data
-        });
-        return { success: true };
-    }
-
     const response = await fetch(`${API_URL}/admin/members`, {
         method: 'POST',
         headers: { 
@@ -393,7 +157,6 @@ export const api = {
   },
 
   getMembers: async (token: string) => {
-    if (token === 'mock-admin-token') return MOCK_MEMBERS_LIST;
     try {
         const response = await fetch(`${API_URL}/admin/members`, {
             headers: { 'Authorization': `Token ${token}` }
@@ -401,17 +164,11 @@ export const api = {
         if (!response.ok) throw new Error('Failed to fetch members');
         return await response.json();
     } catch (e) {
-        return MOCK_MEMBERS_LIST;
+        throw e;
     }
   },
 
   getAdminStatement: async (token: string) => {
-    if (token === 'mock-admin-token') {
-        return [
-            ...MOCK_TRANSACTIONS.map(t => ({...t, userName: MOCK_USER.name, phoneNumber: '01712345678'})),
-            ...MOCK_PENDING_REQUESTS.map(t => ({...t, userName: t.userName})),
-        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    }
     const response = await fetch(`${API_URL}/admin/statement`, {
         headers: { 'Authorization': `Token ${token}` }
     });
@@ -420,14 +177,6 @@ export const api = {
   },
 
   uploadAvatar: async (token: string, file: File) => {
-    if (token.startsWith('mock-')) {
-        await delay(1500);
-        // Return a dummy placeholder in mock mode
-        const mockUrl = "https://ui-avatars.com/api/?name=" + MOCK_USER.name + "&background=random";
-        MOCK_USER.profileImage = mockUrl;
-        return { url: mockUrl };
-    }
-
     const response = await fetch(`/api/user/avatar?filename=${file.name}`, {
       method: 'POST',
       headers: { 'Authorization': `Token ${token}` },

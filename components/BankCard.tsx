@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Wallet, Copy, Eye, EyeOff, Users } from 'lucide-react';
 import { User } from '../types';
@@ -11,8 +10,11 @@ interface BankCardProps {
 export const BankCard: React.FC<BankCardProps> = ({ user, totalFund = 0 }) => {
   const [showBalance, setShowBalance] = useState(true);
   
-  // Generate a Member ID based on user data or fallback
-  const memberId = user.id.length > 8 ? `MEM-${user.id.substring(0, 4)}-${user.id.substring(4, 8)}`.toUpperCase() : "MEM-829-1034";
+  // Generate a Member ID based on user data
+  // Assuming user.id is a Mongo ObjectId (24 chars), we take the first 4 and last 4 for display
+  const memberId = user.id && user.id.length >= 8 
+    ? `MEM-${user.id.substring(0, 4)}-${user.id.substring(user.id.length - 4)}`.toUpperCase() 
+    : "MEM-PENDING";
   
   // Logic: Members see their own balance, Admins see total fund
   const displayLabel = user.isAdmin ? "Total Bank Amount" : "My Contribution";
