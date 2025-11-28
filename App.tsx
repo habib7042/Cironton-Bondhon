@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { LoginFlow } from './components/LoginFlow';
 import { Dashboard } from './components/Dashboard';
+import { InstallPrompt } from './components/InstallPrompt';
 import { User } from './types';
 
 const App: React.FC = () => {
@@ -47,6 +48,7 @@ const App: React.FC = () => {
       ) : (
         <LoginFlow onSuccess={handleLoginSuccess} />
       )}
+      <InstallPrompt />
     </div>
   );
 };

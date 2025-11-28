@@ -1,10 +1,8 @@
-
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Transaction } from '../types';
 import { ArrowUpRight, ArrowDownLeft, PieChart, Search, Bell, ChevronRight, Users, TrendingUp, Clock, ShieldCheck, LayoutDashboard, Loader2, Send, IdCard, Wallet, FileText, UserCog, Camera, Settings } from 'lucide-react';
 import { AiAssistant } from './AiAssistant';
+import { LiveChat } from './LiveChat';
 import { BankCard } from './BankCard';
 import { ActionModal } from './ActionModal';
 import { AdminPanel } from './AdminPanel';
@@ -385,6 +383,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
       </main>
 
       <AiAssistant mode="FINANCIAL_ADVISOR" contextData={contextForAi} />
+      <LiveChat user={user} />
       
       <ActionModal 
         isOpen={modalConfig.isOpen} 

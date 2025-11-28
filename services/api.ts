@@ -249,5 +249,27 @@ export const api = {
       });
       if (!response.ok) throw new Error('Failed to save document');
       return await response.json();
+  },
+
+  // CHAT METHODS
+  getChatMessages: async (token: string) => {
+      const response = await fetch(`${API_URL}/chat`, {
+          headers: { 'Authorization': `Token ${token}` }
+      });
+      if (!response.ok) return [];
+      return await response.json();
+  },
+
+  sendChatMessage: async (token: string, message: string) => {
+      const response = await fetch(`${API_URL}/chat`, {
+          method: 'POST',
+          headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${token}` 
+          },
+          body: JSON.stringify({ message })
+      });
+      if (!response.ok) throw new Error('Failed to send');
+      return await response.json();
   }
 };
