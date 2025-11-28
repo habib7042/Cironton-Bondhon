@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, ArrowUpRight, ArrowDownLeft, Download, Send, IdCard, Upload, Printer, Wallet, UserCog, User, Lock, FileText, Plus, Trash2, Loader2, Save } from 'lucide-react';
 import { Transaction, User as UserType } from '../types';
@@ -12,9 +10,15 @@ interface FeatureModalProps {
   feature: 'growth' | 'split' | 'history' | 'rules' | 'id_card' | 'balance_mgmt' | 'reports' | 'profile_edit' | null;
   transactions: Transaction[];
   user: UserType;
+  stats?: {
+      totalDeposited: number;
+      totalWithdrawn: number;
+      currentBalance: number;
+      growth: { label: string; value: number }[];
+  };
 }
 
-export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, feature, transactions, user }) => {
+export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, feature, transactions, user, stats }) => {
   const [members, setMembers] = useState<any[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   
@@ -664,71 +668,130 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
           );
 
       case 'growth':
+        const growthData = stats?.growth || [];
+        // Find max value for bar scaling
+        const maxVal = Math.max(...growthData.map(d => d.value), 1);
+
         return (
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-2xl font-bold text-emerald-400">Fund Growth</h3>
-              <p className="text-slate-400 text-sm">Last 6 Months Performance</p>
+              <p className="text-slate-400 text-sm">Last 6 Months Deposits</p>
             </div>
-            {/* Simple CSS Bar Chart */}
-            <div className="h-48 flex items-end justify-between gap-2 px-2">
-              {[45, 58, 62, 75, 80, 95].map((h, i) => (
-                <div key={i} className="w-full flex flex-col items-center gap-2 group">
-                    <div className="relative w-full bg-nova-700 rounded-t-lg overflow-hidden transition-all duration-500 group-hover:bg-emerald-500/20" style={{ height: `${h}%` }}>
-                        <div className="absolute bottom-0 w-full bg-emerald-500 opacity-50 h-full"></div>
+            {/* Real Data Bar Chart */}
+            <div className="h-48 flex items-end justify-between gap-2 px-2 mt-4">
+              {growthData.map((d, i) => {
+                const heightPercentage = Math.max((d.value / maxVal) * 100, 5); // Min 5% height
+                return (
+                    <div key={i} className="w-full flex flex-col items-center gap-2 group">
+                         <div className="text-[9px] text-white opacity-0 group-hover:opacity-100 transition-opacity mb-1">
+                             ৳{d.value >= 1000 ? `${(d.value/1000).toFixed(1)}k` : d.value}
+                         </div>
+                        <div className="relative w-full bg-nova-700 rounded-t-lg overflow-hidden transition-all duration-500 group-hover:bg-emerald-500/20" style={{ height: `${heightPercentage}%` }}>
+                            <div className="absolute bottom-0 w-full bg-emerald-500 opacity-50 h-full"></div>
+                        </div>
+                        <span className="text-[10px] text-slate-500 uppercase">{d.label}</span>
                     </div>
-                    <span className="text-[10px] text-slate-500">M{i+1}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            {growthData.length === 0 && (
+                 <p className="text-center text-xs text-slate-500">No deposit history yet.</p>
+            )}
+            
             <div className="bg-nova-900/50 p-4 rounded-xl border border-white/5">
                 <div className="flex justify-between items-center mb-2">
                     <span className="text-slate-400 text-sm">Total Fund Value</span>
-                    <span className="text-emerald-400 font-bold">৳5,24,500</span>
+                    <span className="text-emerald-400 font-bold">৳{stats?.currentBalance.toLocaleString() || '0'}</span>
                 </div>
+                {/* 
+                  Simple growth metric: compare last month to previous if available.
+                  Assuming array is sorted chronologically, last index is latest.
+                */}
                 <div className="flex justify-between items-center">
-                    <span className="text-slate-400 text-sm">Monthly Growth</span>
-                    <span className="text-emerald-400 font-bold flex items-center gap-1"><TrendingUp size={14}/> +12.5%</span>
+                    <span className="text-slate-400 text-sm">Latest Month</span>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <TrendingUp size={14}/> ৳{growthData[growthData.length-1]?.value.toLocaleString() || 0}
+                    </span>
                 </div>
             </div>
           </div>
         );
+
       case 'split':
+        const deposited = stats?.totalDeposited || 0;
+        const withdrawn = stats?.totalWithdrawn || 0;
+        const current = stats?.currentBalance || 0;
+        // Calculate percentages
+        const totalActivity = deposited; // Total money ever entered the system via deposits
+        // Note: 'current' balance is basically (deposited - withdrawn).
+        // To show a split of "Where is the money?", we can show:
+        // 1. Withdrawn (Disbursed)
+        // 2. Available (Current Balance)
+        // Denominated by Total Deposited.
+
+        const withdrawnPct = totalActivity > 0 ? Math.round((withdrawn / totalActivity) * 100) : 0;
+        const availablePct = totalActivity > 0 ? Math.round((current / totalActivity) * 100) : 0;
+        
+        // Adjust for floating point errors or over-withdrawal scenarios (unlikely in this logic but good for safety)
+        // If withdrawn + available > 100%, normalize visually? 
+        // For simple split, let's just use these relative to total deposits.
+
         return (
            <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-2xl font-bold text-emerald-400">Fund Allocation</h3>
-              <p className="text-slate-400 text-sm">Where is our money?</p>
+              <p className="text-slate-400 text-sm">Funds Utilization Overview</p>
             </div>
             
             <div className="relative w-48 h-48 mx-auto my-8">
-                 {/* CSS Conic Gradient for Pie Chart */}
-                <div className="w-full h-full rounded-full" style={{ background: 'conic-gradient(#10b981 0% 65%, #3b82f6 65% 90%, #f59e0b 90% 100%)' }}></div>
-                <div className="absolute inset-4 bg-nova-800 rounded-full flex items-center justify-center">
-                    <span className="text-slate-400 font-medium text-xs text-center">Total<br/><strong className="text-white text-lg">100%</strong></span>
+                 {/* 
+                    CSS Conic Gradient based on real split.
+                    If no data, show gray ring.
+                 */}
+                 {totalActivity > 0 ? (
+                    <div 
+                        className="w-full h-full rounded-full transition-all duration-1000" 
+                        style={{ 
+                            background: `conic-gradient(#3b82f6 0% ${withdrawnPct}%, #10b981 ${withdrawnPct}% 100%)` 
+                        }}
+                    ></div>
+                 ) : (
+                    <div className="w-full h-full rounded-full border-4 border-nova-700"></div>
+                 )}
+                
+                <div className="absolute inset-4 bg-nova-800 rounded-full flex flex-col items-center justify-center">
+                    <span className="text-slate-400 font-medium text-xs text-center">Total Collected</span>
+                    <strong className="text-white text-lg">৳{deposited.toLocaleString()}</strong>
                 </div>
             </div>
 
             <div className="space-y-3">
-                {[
-                    { label: 'Member Loans', val: '65%', color: 'bg-emerald-500', amount: '৳3,40,925' },
-                    { label: 'Bank Deposit', val: '25%', color: 'bg-blue-500', amount: '৳1,31,125' },
-                    { label: 'Cash in Hand', val: '10%', color: 'bg-amber-500', amount: '৳52,450' },
-                ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 bg-nova-900/50 rounded-xl border border-white/5">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
-                            <span className="text-slate-300 text-sm">{item.label}</span>
-                        </div>
-                        <div className="text-right">
-                            <span className="block text-white font-bold text-sm">{item.val}</span>
-                            <span className="text-[10px] text-slate-500">{item.amount}</span>
-                        </div>
+                <div className="flex items-center justify-between p-3 bg-nova-900/50 rounded-xl border border-white/5">
+                    <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                        <span className="text-slate-300 text-sm">Disbursed (Withdrawals)</span>
                     </div>
-                ))}
+                    <div className="text-right">
+                        <span className="block text-white font-bold text-sm">{withdrawnPct}%</span>
+                        <span className="text-[10px] text-slate-500">৳{withdrawn.toLocaleString()}</span>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-nova-900/50 rounded-xl border border-white/5">
+                     <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                        <span className="text-slate-300 text-sm">Available Balance</span>
+                    </div>
+                    <div className="text-right">
+                        <span className="block text-white font-bold text-sm">{availablePct}%</span>
+                        <span className="text-[10px] text-slate-500">৳{current.toLocaleString()}</span>
+                    </div>
+                </div>
             </div>
            </div>
         );
+
       case 'history':
         return (
           <div className="space-y-4 h-[60vh] flex flex-col">

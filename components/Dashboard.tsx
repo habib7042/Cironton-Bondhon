@@ -19,6 +19,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totalFund, setTotalFund] = useState(0); 
+  const [activeMembers, setActiveMembers] = useState(0);
+  const [dashboardStats, setDashboardStats] = useState<any>(null); // Store growth/split data
+
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,6 +57,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
           
           setUser(prev => ({ ...prev, balance: parseFloat(data.balance) }));
           setTotalFund(data.totalGroupBalance || 0);
+          setActiveMembers(data.activeMembersCount || 0);
+          setDashboardStats(data.stats); // Store real stats
           
           if (Array.isArray(data.transactions)) {
             const mappedTransactions: Transaction[] = data.transactions.map((t: any) => ({
@@ -162,14 +167,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
       );
   }
 
-  const totalMembers = 12; // Keep static or fetch from API if needed
-
   const contextForAi = `
     Today's Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
     User: ${user.name}
     My Contribution: ৳${user.balance.toLocaleString()}
     Group Fund Total: ৳${totalFund.toLocaleString()}
-    Total Members: ${totalMembers}
+    Total Members: ${activeMembers}
     Recent Activity: ${transactions.map(t => `${t.merchant} on ${t.date} (${t.status})`).join(', ')}
   `;
 
@@ -262,7 +265,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
                         <span className="text-xs text-slate-400 mb-1">Active Members</span>
                         <div className="flex items-center gap-1 text-lg font-bold text-white">
                             <Users size={16} className="text-emerald-500" />
-                            <span>{totalMembers}</span>
+                            <span>{activeMembers}</span>
                         </div>
                     </div>
                 </div>
@@ -398,6 +401,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
         onClose={() => setFeatureModal(null)}
         transactions={transactions}
         user={user}
+        stats={dashboardStats}
       />
     </div>
   );
