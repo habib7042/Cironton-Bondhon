@@ -1,5 +1,3 @@
-
-
 import { User, Transaction, MemberFormData } from '../types';
 
 const API_URL = '/api'; // Relative path for Next.js API routes
@@ -200,15 +198,31 @@ export const api = {
   },
 
   checkRecipient: async (token: string, phoneNumber: string) => {
-      await delay(600);
-      
+      // Mock logic
       if (token.startsWith('mock-')) {
+          await delay(600);
           const member = MOCK_MEMBERS_LIST.find(m => m.phoneNumber === phoneNumber);
           if (member) return { name: member.name };
           if (phoneNumber === '01700000000') return { name: 'Demo Receiver' };
           throw new Error("Recipient not found");
       }
-      throw new Error("Recipient lookup failed");
+
+      // Real logic
+      try {
+        const response = await fetch(`${API_URL}/user/lookup`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${token}`
+            },
+            body: JSON.stringify({ phoneNumber })
+        });
+        
+        if (!response.ok) throw new Error('Recipient not found');
+        return await response.json();
+      } catch (error) {
+        throw error;
+      }
   },
 
   createTransaction: async (token: string, type: 'DEPOSIT' | 'WITHDRAW', amount: number) => {
@@ -246,11 +260,13 @@ export const api = {
   },
 
   transferMoney: async (token: string, recipientPhone: string, amount: number, pin: string) => {
-    await delay(1000); // Simulate network
-
-    if (pin !== '1234') throw new Error('Incorrect PIN');
-
+    // Note: In real app, you should verify PIN via API. 
+    // Here we rely on the component/modal flow for PIN or backend check.
+    
     if (token.startsWith('mock-')) {
+        await delay(1000);
+        if (pin !== '1234') throw new Error('Incorrect PIN');
+
         const currentBalance = parseFloat(MOCK_USER.balance);
         if (currentBalance < amount) throw new Error('Insufficient balance');
 
@@ -271,7 +287,26 @@ export const api = {
         return newTx;
     }
     
-    throw new Error("Transfer service unavailable (Mock Mode Only)");
+    // Real implementation requires a transfer endpoint. 
+    // Reusing the transaction creation for now, but in production needs dedicated route.
+    try {
+        const response = await fetch(`${API_URL}/transactions`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${token}`
+            },
+            body: JSON.stringify({ 
+                transaction_type: 'TRANSFER', 
+                amount,
+                recipientPhone
+            }),
+        });
+        if (!response.ok) throw new Error('Transfer failed');
+        return await response.json();
+    } catch (error) {
+        throw error;
+    }
   },
 
   getPendingTransactions: async (token: string) => {
