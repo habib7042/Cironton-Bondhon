@@ -17,6 +17,15 @@ const UserSchema = new Schema({
   address: { type: String },
   nomineeName: { type: String },
   nomineeNid: { type: String },
+
+  // Documents
+  nidImage: { type: String },
+  nomineeNidImage: { type: String },
+  documents: [{
+    name: { type: String },
+    url: { type: String },
+    uploadedAt: { type: Date, default: Date.now }
+  }]
 }, {
   timestamps: true, // Adds createdAt and updatedAt
 });

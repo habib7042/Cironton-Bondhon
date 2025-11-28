@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Transaction } from '../types';
-import { ArrowUpRight, ArrowDownLeft, PieChart, Search, Bell, ChevronRight, Users, TrendingUp, Clock, ShieldCheck, LayoutDashboard, Loader2, Send, IdCard, Wallet, FileText, UserCog, Camera } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, PieChart, Search, Bell, ChevronRight, Users, TrendingUp, Clock, ShieldCheck, LayoutDashboard, Loader2, Send, IdCard, Wallet, FileText, UserCog, Camera, Settings } from 'lucide-react';
 import { AiAssistant } from './AiAssistant';
 import { BankCard } from './BankCard';
 import { ActionModal } from './ActionModal';
@@ -27,7 +27,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
     isOpen: false,
     type: 'deposit'
   });
-  const [featureModal, setFeatureModal] = useState<'growth' | 'split' | 'history' | 'rules' | 'id_card' | 'balance_mgmt' | 'reports' | null>(null);
+  const [featureModal, setFeatureModal] = useState<'growth' | 'split' | 'history' | 'rules' | 'id_card' | 'balance_mgmt' | 'reports' | 'profile_edit' | null>(null);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminTabOverride, setAdminTabOverride] = useState<'REQUESTS' | 'MEMBERS'>('REQUESTS');
 
@@ -219,7 +219,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
                 <p className="font-semibold text-white leading-tight">{user.name}</p>
             </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+            {!user.isAdmin && (
+                 <button 
+                    onClick={() => setFeatureModal('profile_edit')}
+                    className="text-slate-400 hover:text-white transition-colors p-2 hover:bg-white/5 rounded-full"
+                    title="Profile Settings"
+                 >
+                    <Settings size={20} />
+                 </button>
+            )}
             {user.isAdmin && (
                 <button 
                     onClick={() => { setAdminTabOverride('REQUESTS'); setShowAdminPanel(true); }}
@@ -229,7 +238,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
                     <ShieldCheck size={20} />
                 </button>
             )}
-            <button onClick={onLogout} className="text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded-lg px-2 py-1">
+            <button onClick={onLogout} className="text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded-lg px-2 py-1 ml-2">
                 Sign Out
             </button>
         </div>

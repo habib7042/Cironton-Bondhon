@@ -177,6 +177,7 @@ export const api = {
   },
 
   uploadAvatar: async (token: string, file: File) => {
+    // Legacy endpoint specifically for avatar, can use generic uploadFile instead
     const response = await fetch(`/api/user/avatar?filename=${file.name}`, {
       method: 'POST',
       headers: { 'Authorization': `Token ${token}` },
@@ -188,5 +189,65 @@ export const api = {
     }
 
     return await response.json();
+  },
+
+  uploadFile: async (token: string, file: File, type: 'avatar' | 'nid' | 'document') => {
+    const response = await fetch(`/api/upload?filename=${file.name}&type=${type}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Token ${token}` },
+        body: file,
+    });
+
+    if (!response.ok) throw new Error('Upload failed');
+    return await response.json(); // returns { url: string }
+  },
+
+  getFullProfile: async (token: string) => {
+      const response = await fetch(`${API_URL}/user/profile`, {
+          headers: { 'Authorization': `Token ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch profile');
+      return await response.json();
+  },
+
+  updateProfile: async (token: string, data: any) => {
+      const response = await fetch(`${API_URL}/user/profile`, {
+          method: 'POST',
+          headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${token}` 
+          },
+          body: JSON.stringify({ action: 'UPDATE_INFO', ...data })
+      });
+      if (!response.ok) throw new Error('Update failed');
+      return await response.json();
+  },
+
+  changePin: async (token: string, oldPin: string, newPin: string) => {
+      const response = await fetch(`${API_URL}/user/profile`, {
+          method: 'POST',
+          headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${token}` 
+          },
+          body: JSON.stringify({ action: 'CHANGE_PIN', oldPin, newPin })
+      });
+      
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.error || 'Failed to change PIN');
+      return resData;
+  },
+
+  addDocument: async (token: string, docName: string, docUrl: string) => {
+      const response = await fetch(`${API_URL}/user/profile`, {
+          method: 'POST',
+          headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${token}` 
+          },
+          body: JSON.stringify({ action: 'ADD_DOC', docName, docUrl })
+      });
+      if (!response.ok) throw new Error('Failed to save document');
+      return await response.json();
   }
 };

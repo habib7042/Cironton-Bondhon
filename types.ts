@@ -8,6 +8,20 @@ export interface User {
   isAdmin?: boolean; // New Admin Flag
   address?: string; // Added for Statement
   profileImage?: string; // Vercel Blob URL
+  
+  // Extended Profile
+  fatherName?: string;
+  motherName?: string;
+  nid?: string;
+  dob?: string;
+  email?: string;
+  nomineeName?: string;
+  nomineeNid?: string;
+  
+  // Documents
+  nidImage?: string;
+  nomineeNidImage?: string;
+  documents?: { name: string; url: string; uploadedAt?: string }[];
 }
 
 export interface MemberFormData {

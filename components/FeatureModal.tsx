@@ -1,16 +1,17 @@
 
 
 import React, { useState, useEffect } from 'react';
-import { X, TrendingUp, ArrowUpRight, ArrowDownLeft, Download, Send, IdCard, Upload, Printer, Wallet, UserCog } from 'lucide-react';
-import { Transaction, User } from '../types';
+import { X, TrendingUp, ArrowUpRight, ArrowDownLeft, Download, Send, IdCard, Upload, Printer, Wallet, UserCog, User, Lock, FileText, Plus, Trash2, Loader2, Save } from 'lucide-react';
+import { Transaction, User as UserType } from '../types';
 import { api } from '../services/api';
+import { Button } from './Button';
 
 interface FeatureModalProps {
   isOpen: boolean;
   onClose: () => void;
-  feature: 'growth' | 'split' | 'history' | 'rules' | 'id_card' | 'balance_mgmt' | 'reports' | null;
+  feature: 'growth' | 'split' | 'history' | 'rules' | 'id_card' | 'balance_mgmt' | 'reports' | 'profile_edit' | null;
   transactions: Transaction[];
-  user: User;
+  user: UserType;
 }
 
 export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, feature, transactions, user }) => {
@@ -21,20 +22,40 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
+  // Profile Edit State
+  const [profileTab, setProfileTab] = useState<'INFO' | 'SECURITY' | 'DOCS'>('INFO');
+  const [profileData, setProfileData] = useState<UserType | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Security State
+  const [oldPin, setOldPin] = useState('');
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  
+  // Doc State
+  const [docName, setDocName] = useState('');
+  const [docFile, setDocFile] = useState<File | null>(null);
+
   useEffect(() => {
-    if (isOpen && (feature === 'id_card' || feature === 'balance_mgmt')) {
-        loadMembers();
+    if (isOpen) {
+        if (feature === 'id_card' || feature === 'balance_mgmt') {
+            loadMembers();
+        }
+        if (feature === 'profile_edit') {
+            loadFullProfile();
+        }
     }
   }, [isOpen, feature]);
 
-  // When a member is selected, if they already have a profile image in DB, use it
+  // When a member is selected for ID card
   useEffect(() => {
       if (selectedMemberId && members.length > 0) {
           const m = members.find(mem => mem.id === selectedMemberId);
           if (m && m.profile_image) {
-              setPreviewImage(m.profile_image); // Use stored Blob URL
+              setPreviewImage(m.profile_image); 
           } else {
-              setPreviewImage(null); // Reset if no image
+              setPreviewImage(null);
           }
       }
   }, [selectedMemberId, members]);
@@ -52,6 +73,95 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
       }
   };
 
+  const loadFullProfile = async () => {
+      if (!user.token) return;
+      setIsProfileLoading(true);
+      try {
+          const data = await api.getFullProfile(user.token);
+          setProfileData(data);
+      } catch (e) {
+          console.error("Profile load failed", e);
+      } finally {
+          setIsProfileLoading(false);
+      }
+  };
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!user.token || !profileData) return;
+      setIsSaving(true);
+      try {
+          await api.updateProfile(user.token, profileData);
+          alert("Profile updated successfully!");
+      } catch (e: any) {
+          alert(e.message || "Update failed");
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+  const handlePinChange = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!user.token) return;
+      if (newPin !== confirmPin) {
+          alert("New PINs do not match");
+          return;
+      }
+      setIsSaving(true);
+      try {
+          await api.changePin(user.token, oldPin, newPin);
+          alert("PIN changed successfully!");
+          setOldPin(''); setNewPin(''); setConfirmPin('');
+      } catch (e: any) {
+          alert(e.message || "Failed to change PIN");
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'nid' | 'nominee' | 'document') => {
+      if (e.target.files && e.target.files[0] && user.token && profileData) {
+          const file = e.target.files[0];
+          setIsSaving(true);
+          try {
+              const res = await api.uploadFile(user.token, file, type === 'document' ? 'document' : 'nid');
+              
+              if (type === 'nid') {
+                  setProfileData({ ...profileData, nidImage: res.url });
+                  await api.updateProfile(user.token, { nidImage: res.url });
+              } else if (type === 'nominee') {
+                  setProfileData({ ...profileData, nomineeNidImage: res.url });
+                  await api.updateProfile(user.token, { nomineeNidImage: res.url });
+              } else if (type === 'document') {
+                  // Wait for name input logic
+                  return res.url;
+              }
+          } catch (e) {
+              alert("Upload failed");
+          } finally {
+              setIsSaving(false);
+          }
+      }
+  };
+
+  const handleAddDocument = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!user.token || !docFile || !docName) return;
+      setIsSaving(true);
+      try {
+          const res = await api.uploadFile(user.token, docFile, 'document');
+          await api.addDocument(user.token, docName, res.url);
+          // Refresh profile to see new doc
+          await loadFullProfile();
+          setDocName('');
+          setDocFile(null);
+      } catch (e) {
+          alert("Failed to add document");
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
           const file = e.target.files[0];
@@ -62,6 +172,24 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
           reader.readAsDataURL(file);
       }
   };
+
+  // Reused Components
+  const ImageUploadBox = ({ label, imageUrl, onChange }: { label: string, imageUrl?: string, onChange: (e: any) => void }) => (
+      <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase">{label}</label>
+          <div className="border-2 border-dashed border-white/10 rounded-xl h-32 flex flex-col items-center justify-center relative hover:border-emerald-500/50 transition-colors bg-nova-900/30 overflow-hidden">
+                {imageUrl ? (
+                    <img src={imageUrl} alt="Uploaded" className="w-full h-full object-cover" />
+                ) : (
+                    <div className="flex flex-col items-center gap-2 text-slate-500">
+                        <Upload size={20} />
+                        <span className="text-xs">Tap to Upload</span>
+                    </div>
+                )}
+                <input type="file" accept="image/*" onChange={onChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+          </div>
+      </div>
+  );
 
   const printIDCard = () => {
      const member = members.find(m => m.id === selectedMemberId);
@@ -252,6 +380,160 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
 
   const renderContent = () => {
     switch (feature) {
+      case 'profile_edit':
+        if (isProfileLoading || !profileData) return <div className="text-center py-10"><Loader2 className="animate-spin mx-auto text-emerald-500"/></div>;
+
+        return (
+            <div className="h-full flex flex-col">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold text-white">Profile Settings</h3>
+                  <p className="text-slate-400 text-sm">Manage your account details</p>
+                </div>
+
+                <div className="flex p-1 bg-nova-900 rounded-xl mb-6 border border-white/5">
+                    {['INFO', 'DOCS', 'SECURITY'].map((tab) => (
+                        <button 
+                            key={tab}
+                            onClick={() => setProfileTab(tab as any)}
+                            className={`flex-1 py-2 text-xs font-medium rounded-lg flex items-center justify-center gap-2 transition-all ${
+                                profileTab === tab ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+                            }`}
+                        >
+                            {tab === 'INFO' && <User size={14} />}
+                            {tab === 'DOCS' && <FileText size={14} />}
+                            {tab === 'SECURITY' && <Lock size={14} />}
+                            {tab === 'DOCS' ? 'DOCUMENTS' : tab}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-4">
+                    {profileTab === 'INFO' && (
+                        <form onSubmit={handleProfileUpdate} className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-400 uppercase">Full Name</label>
+                                    <input value={profileData.name || ''} onChange={e => setProfileData({...profileData, name: e.target.value})} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-2 text-sm text-white focus:border-emerald-500 outline-none" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-400 uppercase">Email</label>
+                                    <input value={profileData.email || ''} onChange={e => setProfileData({...profileData, email: e.target.value})} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-2 text-sm text-white focus:border-emerald-500 outline-none" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-400 uppercase">Father's Name</label>
+                                    <input value={profileData.fatherName || ''} onChange={e => setProfileData({...profileData, fatherName: e.target.value})} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-2 text-sm text-white focus:border-emerald-500 outline-none" />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-400 uppercase">Mother's Name</label>
+                                    <input value={profileData.motherName || ''} onChange={e => setProfileData({...profileData, motherName: e.target.value})} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-2 text-sm text-white focus:border-emerald-500 outline-none" />
+                                </div>
+                                <div className="space-y-1 sm:col-span-2">
+                                    <label className="text-xs text-slate-400 uppercase">Address</label>
+                                    <input value={profileData.address || ''} onChange={e => setProfileData({...profileData, address: e.target.value})} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-2 text-sm text-white focus:border-emerald-500 outline-none" />
+                                </div>
+                            </div>
+                            
+                            <div className="pt-2 border-t border-white/5">
+                                <h4 className="text-xs font-bold text-emerald-500 mb-3 uppercase">Nominee Info</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <label className="text-xs text-slate-400 uppercase">Name</label>
+                                        <input value={profileData.nomineeName || ''} onChange={e => setProfileData({...profileData, nomineeName: e.target.value})} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-2 text-sm text-white focus:border-emerald-500 outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs text-slate-400 uppercase">NID</label>
+                                        <input value={profileData.nomineeNid || ''} onChange={e => setProfileData({...profileData, nomineeNid: e.target.value})} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-2 text-sm text-white focus:border-emerald-500 outline-none" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Button type="submit" fullWidth isLoading={isSaving} className="mt-4">
+                                <Save size={16} /> Save Changes
+                            </Button>
+                        </form>
+                    )}
+
+                    {profileTab === 'DOCS' && (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <ImageUploadBox label="My NID Card" imageUrl={profileData.nidImage} onChange={(e) => handleFileUpload(e, 'nid')} />
+                                <ImageUploadBox label="Nominee NID" imageUrl={profileData.nomineeNidImage} onChange={(e) => handleFileUpload(e, 'nominee')} />
+                            </div>
+
+                            <div className="pt-4 border-t border-white/5">
+                                <h4 className="text-xs font-bold text-emerald-500 mb-3 uppercase flex items-center gap-2">
+                                    Additional Documents
+                                </h4>
+                                
+                                <form onSubmit={handleAddDocument} className="flex gap-2 mb-4">
+                                    <input 
+                                        placeholder="Doc Name (e.g. Utility Bill)" 
+                                        value={docName}
+                                        onChange={e => setDocName(e.target.value)}
+                                        className="flex-1 bg-nova-900/50 border border-white/10 rounded-lg px-3 text-sm text-white focus:border-emerald-500 outline-none"
+                                    />
+                                    <div className="relative overflow-hidden">
+                                        <button type="button" className="bg-nova-800 hover:bg-nova-700 text-white p-2.5 rounded-lg border border-white/10">
+                                            {docFile ? <FileText size={18} className="text-emerald-400"/> : <Upload size={18} />}
+                                        </button>
+                                        <input type="file" onChange={e => e.target.files && setDocFile(e.target.files[0])} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                    </div>
+                                    <button type="submit" disabled={!docFile || !docName || isSaving} className="bg-emerald-600 hover:bg-emerald-500 text-white p-2.5 rounded-lg disabled:opacity-50">
+                                        {isSaving ? <Loader2 size={18} className="animate-spin"/> : <Plus size={18} />}
+                                    </button>
+                                </form>
+
+                                <div className="space-y-2">
+                                    {profileData.documents?.map((doc, i) => (
+                                        <div key={i} className="flex items-center justify-between p-3 bg-nova-900/50 rounded-xl border border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-nova-800 rounded-lg">
+                                                    <FileText size={16} className="text-slate-400" />
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-medium text-white">{doc.name}</div>
+                                                    <div className="text-[10px] text-slate-500">Uploaded {new Date(doc.uploadedAt || Date.now()).toLocaleDateString()}</div>
+                                                </div>
+                                            </div>
+                                            <a href={doc.url} target="_blank" rel="noreferrer" className="text-emerald-400 hover:text-emerald-300 text-xs font-medium">View</a>
+                                        </div>
+                                    ))}
+                                    {(!profileData.documents || profileData.documents.length === 0) && (
+                                        <p className="text-center text-slate-500 text-xs py-2">No extra documents uploaded</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {profileTab === 'SECURITY' && (
+                        <form onSubmit={handlePinChange} className="space-y-4 py-4">
+                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-4">
+                                <p className="text-amber-400 text-xs">Security Note: Changing your PIN will log you out of other devices.</p>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-400 uppercase">Current PIN</label>
+                                <input type="password" maxLength={4} value={oldPin} onChange={e => setOldPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-3 text-lg text-white font-mono tracking-widest focus:border-emerald-500 outline-none text-center" placeholder="••••" />
+                            </div>
+                             <div className="space-y-1">
+                                <label className="text-xs text-slate-400 uppercase">New PIN</label>
+                                <input type="password" maxLength={4} value={newPin} onChange={e => setNewPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-3 text-lg text-white font-mono tracking-widest focus:border-emerald-500 outline-none text-center" placeholder="••••" />
+                            </div>
+                             <div className="space-y-1">
+                                <label className="text-xs text-slate-400 uppercase">Confirm New PIN</label>
+                                <input type="password" maxLength={4} value={confirmPin} onChange={e => setConfirmPin(e.target.value.replace(/\D/g, ''))} className="w-full bg-nova-900/50 border border-white/10 rounded-lg p-3 text-lg text-white font-mono tracking-widest focus:border-emerald-500 outline-none text-center" placeholder="••••" />
+                            </div>
+
+                            <Button type="submit" fullWidth isLoading={isSaving} className="mt-4" disabled={newPin.length < 4 || newPin !== confirmPin}>
+                                Update PIN
+                            </Button>
+                        </form>
+                    )}
+                </div>
+            </div>
+        );
+
       case 'balance_mgmt':
           const totalAssets = members.reduce((acc, m) => acc + (m.balance || 0), 0);
           return (
