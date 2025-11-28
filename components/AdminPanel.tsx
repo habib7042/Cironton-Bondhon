@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Transaction, User, MemberFormData } from '../types';
-import { Check, X, RefreshCw, ArrowDownLeft, ArrowUpRight, Shield, UserPlus, Save, LayoutList, ChevronDown, ChevronUp, User as UserIcon, Smartphone, Calendar, MapPin, FileText, Loader2 } from 'lucide-react';
+import { Check, X, RefreshCw, ArrowDownLeft, ArrowUpRight, Shield, UserPlus, Save, LayoutList, ChevronDown, ChevronUp, User as UserIcon, Smartphone, Calendar, MapPin, FileText, Loader2, DollarSign } from 'lucide-react';
 import { api } from '../services/api';
 import { Button } from './Button';
 
@@ -28,6 +28,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
       name: '', fatherName: '', motherName: '', nid: '', dob: '', 
       phoneNumber: '', email: '', address: '', nomineeName: '', nomineeNid: ''
   });
+  
+  // Deposit State
+  const [depositAmount, setDepositAmount] = useState('');
+  const [isDepositing, setIsDepositing] = useState(false);
 
   const loadPending = async () => {
     if (!user.token) return;
@@ -94,6 +98,24 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
           alert(error.message || "Failed to add member");
       } finally {
           setFormLoading(false);
+      }
+  };
+
+  const handleAdminDeposit = async (memberId: string) => {
+      if (!user.token || !depositAmount) return;
+      const amount = parseFloat(depositAmount);
+      if (isNaN(amount) || amount <= 0) return;
+
+      setIsDepositing(true);
+      try {
+          await api.adminDeposit(user.token, memberId, amount);
+          alert(`Successfully deposited ৳${amount}`);
+          setDepositAmount('');
+          loadMembers(); // Refresh balance
+      } catch (e) {
+          alert("Deposit failed");
+      } finally {
+          setIsDepositing(false);
       }
   };
 
@@ -299,7 +321,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
                                 <div key={m.id} className="bg-nova-800 border border-white/10 rounded-2xl overflow-hidden">
                                     <div 
                                         className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
-                                        onClick={() => setExpandedMemberId(expandedMemberId === m.id ? null : m.id)}
+                                        onClick={() => {
+                                            setExpandedMemberId(expandedMemberId === m.id ? null : m.id);
+                                            setDepositAmount(''); // Reset input when switching
+                                        }}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-nova-700 border border-white/10 flex items-center justify-center text-emerald-400 font-bold">
@@ -318,6 +343,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
 
                                     {expandedMemberId === m.id && (
                                         <div className="px-4 pb-4 pt-2 bg-nova-900/30 border-t border-white/5 text-sm space-y-3 animate-fade-in">
+                                            
+                                            {/* Admin Deposit Section */}
+                                            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mb-4">
+                                                <h5 className="text-emerald-400 font-bold text-xs uppercase mb-2 flex items-center gap-1">
+                                                    <DollarSign size={12} /> Deposit Subscription
+                                                </h5>
+                                                <div className="flex gap-2">
+                                                    <div className="relative flex-1">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">৳</span>
+                                                        <input 
+                                                            type="number" 
+                                                            placeholder="Amount" 
+                                                            className="w-full bg-nova-900 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-white focus:border-emerald-500 outline-none text-sm"
+                                                            value={depositAmount}
+                                                            onChange={(e) => setDepositAmount(e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => handleAdminDeposit(m.id)}
+                                                        disabled={isDepositing || !depositAmount}
+                                                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-50"
+                                                    >
+                                                        {isDepositing ? <Loader2 size={14} className="animate-spin" /> : 'Confirm'}
+                                                    </button>
+                                                </div>
+                                            </div>
+
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <span className="block text-[10px] uppercase text-slate-500 tracking-wider">Father's Name</span>

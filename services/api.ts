@@ -140,6 +140,19 @@ export const api = {
       return await response.json();
   },
 
+  adminDeposit: async (token: string, memberId: string, amount: number) => {
+      const response = await fetch(`${API_URL}/admin/deposit`, {
+          method: 'POST',
+          headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Token ${token}` 
+          },
+          body: JSON.stringify({ memberId, amount })
+      });
+      if (!response.ok) throw new Error('Failed to deposit');
+      return await response.json();
+  },
+
   addMember: async (token: string, data: MemberFormData) => {
     const response = await fetch(`${API_URL}/admin/members`, {
         method: 'POST',
