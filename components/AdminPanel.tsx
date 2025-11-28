@@ -10,6 +10,30 @@ interface AdminPanelProps {
   initialTab?: 'REQUESTS' | 'MEMBERS';
 }
 
+// Moved InputField outside to prevent re-creation on every render (fixes mobile keyboard focus loss)
+interface InputFieldProps {
+    label: string;
+    value: string;
+    name: string;
+    type?: string;
+    required?: boolean;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const InputField: React.FC<InputFieldProps> = ({ label, value, name, type = "text", required = true, onChange }) => (
+    <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-slate-400 uppercase">{label} {required && <span className="text-rose-400">*</span>}</label>
+        <input 
+            type={type} 
+            name={name}
+            value={value}
+            required={required}
+            onChange={onChange}
+            className="bg-nova-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none transition-colors"
+        />
+    </div>
+);
+
 export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQUESTS' }) => {
   const [activeTab, setActiveTab] = useState<'REQUESTS' | 'MEMBERS'>(initialTab);
   
@@ -79,6 +103,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
       } finally {
           setProcessingId(null);
       }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const { name, value } = e.target;
+      setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleMemberSubmit = async (e: React.FormEvent) => {
@@ -201,19 +230,6 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
           setIsGeneratingPdf(false);
       }
   };
-
-  const InputField = ({ label, value, field, type = "text", required = true }: any) => (
-      <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-400 uppercase">{label} {required && <span className="text-rose-400">*</span>}</label>
-          <input 
-              type={type} 
-              value={value}
-              required={required}
-              onChange={(e) => setFormData(prev => ({ ...prev, [field]: e.target.value }))}
-              className="bg-nova-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none transition-colors"
-          />
-      </div>
-  );
 
   return (
     <div className="min-h-screen bg-nova-900 p-6 pb-20 animate-fade-in">
@@ -426,11 +442,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
                             <div className="space-y-4">
                                 <h4 className="text-sm font-semibold text-emerald-500 uppercase tracking-wider">Personal Information</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <InputField label="Full Name" field="name" value={formData.name} />
-                                    <InputField label="Date of Birth" field="dob" value={formData.dob} type="date" />
-                                    <InputField label="Father's Name" field="fatherName" value={formData.fatherName} />
-                                    <InputField label="Mother's Name" field="motherName" value={formData.motherName} />
-                                    <InputField label="NID Number" field="nid" value={formData.nid} />
+                                    <InputField label="Full Name" name="name" value={formData.name} onChange={handleInputChange} />
+                                    <InputField label="Date of Birth" name="dob" value={formData.dob} type="date" onChange={handleInputChange} />
+                                    <InputField label="Father's Name" name="fatherName" value={formData.fatherName} onChange={handleInputChange} />
+                                    <InputField label="Mother's Name" name="motherName" value={formData.motherName} onChange={handleInputChange} />
+                                    <InputField label="NID Number" name="nid" value={formData.nid} onChange={handleInputChange} />
                                 </div>
                             </div>
 
@@ -438,10 +454,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
                             <div className="space-y-4 border-t border-white/5 pt-4">
                                 <h4 className="text-sm font-semibold text-emerald-500 uppercase tracking-wider">Contact Details</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <InputField label="Phone Number (Login ID)" field="phoneNumber" value={formData.phoneNumber} type="tel" />
-                                    <InputField label="Email (Optional)" field="email" value={formData.email} type="email" required={false} />
+                                    <InputField label="Phone Number (Login ID)" name="phoneNumber" value={formData.phoneNumber} type="tel" onChange={handleInputChange} />
+                                    <InputField label="Email (Optional)" name="email" value={formData.email || ''} type="email" required={false} onChange={handleInputChange} />
                                     <div className="sm:col-span-2">
-                                        <InputField label="Full Address" field="address" value={formData.address} />
+                                        <InputField label="Full Address" name="address" value={formData.address} onChange={handleInputChange} />
                                     </div>
                                 </div>
                             </div>
@@ -450,8 +466,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ user, initialTab = 'REQU
                             <div className="space-y-4 border-t border-white/5 pt-4">
                                 <h4 className="text-sm font-semibold text-emerald-500 uppercase tracking-wider">Nominee Information</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <InputField label="Nominee Name" field="nomineeName" value={formData.nomineeName} />
-                                    <InputField label="Nominee NID" field="nomineeNid" value={formData.nomineeNid} />
+                                    <InputField label="Nominee Name" name="nomineeName" value={formData.nomineeName} onChange={handleInputChange} />
+                                    <InputField label="Nominee NID" name="nomineeNid" value={formData.nomineeNid} onChange={handleInputChange} />
                                 </div>
                             </div>
 
