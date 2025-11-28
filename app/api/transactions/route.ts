@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import connectDB from '@/lib/db';
+import Transaction from '@/models/Transaction';
+import mongoose from 'mongoose';
 
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('Authorization');
     const userId = authHeader?.replace('Token ', '');
 
-    if (!userId) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -17,22 +19,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }
 
-    const result = await pool.query(
-      'INSERT INTO transactions (user_id, transaction_type, amount, status) VALUES ($1, $2, $3, $4) RETURNING *',
-      [userId, transaction_type, amount, 'PENDING']
-    );
+    await connectDB();
 
-    // Note: We do NOT update the user balance here immediately. 
-    // It waits for Admin approval (manual database update or admin panel)
-
-    const tx = result.rows[0];
+    const tx = await Transaction.create({
+      userId,
+      transaction_type,
+      amount,
+      status: 'PENDING'
+    });
 
     return NextResponse.json({
-      id: tx.id,
+      id: tx._id.toString(),
       transaction_type: tx.transaction_type,
-      amount: parseFloat(tx.amount),
+      amount: tx.amount,
       status: tx.status,
-      created_at: tx.created_at
+      created_at: tx.createdAt
     });
 
   } catch (error) {

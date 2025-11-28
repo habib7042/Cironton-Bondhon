@@ -1,7 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Transaction } from '../types';
-import { ArrowUpRight, ArrowDownLeft, PieChart, Search, Bell, ChevronRight, Users, TrendingUp, Clock, ShieldCheck, LayoutDashboard, Loader2, Send, IdCard, Wallet, FileText, UserCog } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, PieChart, Search, Bell, ChevronRight, Users, TrendingUp, Clock, ShieldCheck, LayoutDashboard, Loader2, Send, IdCard, Wallet, FileText, UserCog, Camera } from 'lucide-react';
 import { AiAssistant } from './AiAssistant';
 import { BankCard } from './BankCard';
 import { ActionModal } from './ActionModal';
@@ -18,7 +19,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
   const [user, setUser] = useState(initialUser);
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [totalFund, setTotalFund] = useState(0); // New state for real total fund
+  const [totalFund, setTotalFund] = useState(0); 
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [modalConfig, setModalConfig] = useState<{isOpen: boolean, type: 'deposit' | 'withdraw' | 'transfer'}>({
     isOpen: false,
@@ -30,19 +33,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
 
   // REAL-TIME UPDATE LOGIC
   useEffect(() => {
-    // 1. Initial Fetch
     fetchData();
-
-    // 2. Set up Polling (Every 5 seconds)
     const intervalId = setInterval(() => {
-        // Only fetch if the user has a token and is not currently viewing the Admin Panel
-        // (Admin Panel has its own internal state management)
         if (user.token && !showAdminPanel) {
-            fetchData(true); // Pass true to indicate background fetch
+            fetchData(true);
         }
     }, 5000);
-
-    // 3. Cleanup on unmount
     return () => clearInterval(intervalId);
   }, [user.token, showAdminPanel]);
 
@@ -52,18 +48,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
           return;
       }
       
-      // Only show full-screen loader on the very first load
-      // If we have transactions already (background update), keep UI interactive
       if (!isBackground && transactions.length === 0) setIsLoading(true);
       
       try {
           const data = await api.getDashboardData(user.token);
           
-          // Update Balance & Fund Stats
           setUser(prev => ({ ...prev, balance: parseFloat(data.balance) }));
           setTotalFund(data.totalGroupBalance || 0);
           
-          // Map Backend Transactions to Frontend UI safely
           if (Array.isArray(data.transactions)) {
             const mappedTransactions: Transaction[] = data.transactions.map((t: any) => ({
                 id: t.id.toString(),
@@ -90,7 +82,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
 
   const handleTransaction = async (amount: number, recipient?: string, pin?: string) => {
     if (!user.token) return;
-    
     try {
         if (modalConfig.type === 'transfer') {
             if (!recipient || !pin) throw new Error("Missing info");
@@ -100,16 +91,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
             const type = modalConfig.type === 'deposit' ? 'DEPOSIT' : 'WITHDRAW';
             await api.createTransaction(user.token, type, amount);
         }
-        
-        // Immediate refresh after user action
         await fetchData();
     } catch (e: any) {
-        // Pass error to be handled by modal
         throw e;
     }
   };
 
-  // Admin Navigation Handler
   const handleAdminGridClick = (action: string) => {
       if (action === 'member_mgmt') {
           setAdminTabOverride('MEMBERS');
@@ -121,6 +108,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
       } else if (action === 'reports') {
           setFeatureModal('reports'); 
       }
+  };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0] && user.token) {
+        const file = e.target.files[0];
+        // Basic check
+        if (file.size > 4 * 1024 * 1024) {
+            alert("File is too large. Max 4MB.");
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            const result = await api.uploadAvatar(user.token, file);
+            // Update local user state immediately
+            setUser(prev => ({ ...prev, profileImage: result.url }));
+            alert("Profile photo updated successfully!");
+        } catch (error) {
+            alert("Failed to upload photo. Please try again.");
+        } finally {
+            setIsUploading(false);
+        }
+    }
   };
 
   if (showAdminPanel) {
@@ -159,7 +173,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
     Recent Activity: ${transactions.map(t => `${t.merchant} (${t.status})`).join(', ')}
   `;
 
-  // Define Grid Actions based on Role
   const userActions = [
     { icon: TrendingUp, label: 'Growth', id: 'growth' },
     { icon: PieChart, label: 'Split', id: 'split' },
@@ -178,9 +191,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
       {/* Header */}
       <header className="sticky top-0 z-40 bg-nova-900/80 backdrop-blur-md border-b border-white/5 px-6 py-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-emerald-500/20">
-                {user.name.charAt(0)}
+            <div 
+                onClick={handleAvatarClick}
+                className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-sm font-bold text-white shadow-lg shadow-emerald-500/20 cursor-pointer overflow-hidden relative group"
+            >
+                {user.profileImage ? (
+                    <img src={user.profileImage} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                    user.name.charAt(0)
+                )}
+                
+                {/* Overlay for uploading */}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    {isUploading ? <Loader2 size={16} className="animate-spin text-white"/> : <Camera size={16} className="text-white" />}
+                </div>
             </div>
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                className="hidden" 
+                accept="image/png, image/jpeg, image/jpg"
+            />
+            
             <div>
                 <h1 className="text-xs text-emerald-400 font-medium uppercase tracking-wider">চিরন্তন বন্ধন</h1>
                 <p className="font-semibold text-white leading-tight">{user.name}</p>
@@ -210,7 +243,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
                 <BankCard user={user} totalFund={totalFund} />
             </div>
 
-            {/* Group Stats - Only show for Members or if Admin wants to see it */}
             {!user.isAdmin && (
                 <div className="grid grid-cols-2 gap-4 mb-6">
                     <div className="bg-nova-800/50 rounded-2xl p-4 border border-white/5 flex flex-col items-center justify-center text-center">
@@ -227,7 +259,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
                 </div>
             )}
 
-            {/* Action Buttons */}
             <div className="grid grid-cols-3 gap-3">
                 <button 
                     onClick={() => setModalConfig({isOpen: true, type: 'deposit'})}

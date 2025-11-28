@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import connectDB from '@/lib/db';
+import User from '@/models/User';
 
 export async function POST(request: Request) {
   try {
@@ -10,27 +11,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 });
     }
 
-    // In a real app, use bcrypt to compare hashed PINs
-    const result = await pool.query(
-      'SELECT id, name, phone_number, balance, is_admin FROM users WHERE phone_number = $1 AND pin = $2',
-      [phoneNumber, pin]
-    );
+    await connectDB();
 
-    if (result.rows.length === 0) {
+    // Find user by phone and pin (In production, hash the pin!)
+    const user = await User.findOne({ phoneNumber, pin });
+
+    if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const user = result.rows[0];
-
-    // In a real app, generate a JWT here. For simplicity, we return the User ID as the token.
     return NextResponse.json({
-      token: user.id.toString(),
+      token: user._id.toString(), // Use Mongo ID as token
       user: {
-        id: user.id.toString(),
+        id: user._id.toString(),
         name: user.name,
-        balance: parseFloat(user.balance),
-        phoneNumber: user.phone_number,
-        isAdmin: user.is_admin
+        balance: user.balance,
+        phoneNumber: user.phoneNumber,
+        isAdmin: user.isAdmin,
+        profileImage: user.profileImage
       }
     });
 

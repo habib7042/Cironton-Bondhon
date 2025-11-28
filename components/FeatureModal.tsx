@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { X, TrendingUp, ArrowUpRight, ArrowDownLeft, Download, Send, IdCard, Upload, Printer, Wallet, UserCog } from 'lucide-react';
 import { Transaction, User } from '../types';
@@ -25,6 +26,18 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
         loadMembers();
     }
   }, [isOpen, feature]);
+
+  // When a member is selected, if they already have a profile image in DB, use it
+  useEffect(() => {
+      if (selectedMemberId && members.length > 0) {
+          const m = members.find(mem => mem.id === selectedMemberId);
+          if (m && m.profile_image) {
+              setPreviewImage(m.profile_image); // Use stored Blob URL
+          } else {
+              setPreviewImage(null); // Reset if no image
+          }
+      }
+  }, [selectedMemberId, members]);
 
   const loadMembers = async () => {
       if (!user.token) return;
@@ -260,8 +273,12 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
                           members.map(m => (
                               <div key={m.id} className="flex items-center justify-between p-3 bg-nova-800 rounded-xl border border-white/5">
                                   <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-nova-700 flex items-center justify-center text-xs font-bold text-emerald-400">
-                                          {m.name.charAt(0)}
+                                      <div className="w-8 h-8 rounded-full bg-nova-700 flex items-center justify-center text-xs font-bold text-emerald-400 overflow-hidden">
+                                          {m.profile_image ? (
+                                              <img src={m.profile_image} className="w-full h-full object-cover" alt={m.name} />
+                                          ) : (
+                                              m.name.charAt(0)
+                                          )}
                                       </div>
                                       <div>
                                           <div className="text-sm font-medium text-white">{m.name}</div>
@@ -292,7 +309,7 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
                       <label className="text-xs font-bold text-slate-400 uppercase">Select Member</label>
                       <select 
                         value={selectedMemberId} 
-                        onChange={(e) => { setSelectedMemberId(e.target.value); setPreviewImage(null); }}
+                        onChange={(e) => { setSelectedMemberId(e.target.value); }}
                         className="w-full bg-nova-900 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500 outline-none"
                       >
                           <option value="">-- Choose User --</option>
@@ -305,14 +322,21 @@ export const FeatureModal: React.FC<FeatureModalProps> = ({ isOpen, onClose, fea
                   {selectedMember && (
                       <div className="space-y-4 animate-fade-in">
                           <div className="space-y-2">
-                               <label className="text-xs font-bold text-slate-400 uppercase">Upload Photo</label>
-                               <div className="border-2 border-dashed border-white/10 rounded-xl p-4 text-center hover:border-emerald-500/50 transition-colors cursor-pointer relative">
-                                   <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                   <div className="flex flex-col items-center gap-2 text-slate-400">
-                                       <Upload size={20} />
-                                       <span className="text-xs">Click to upload image</span>
+                               <label className="text-xs font-bold text-slate-400 uppercase">Member Photo</label>
+                               
+                               {!previewImage && (
+                                   <div className="border-2 border-dashed border-white/10 rounded-xl p-4 text-center hover:border-emerald-500/50 transition-colors cursor-pointer relative">
+                                       <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                       <div className="flex flex-col items-center gap-2 text-slate-400">
+                                           <Upload size={20} />
+                                           <span className="text-xs">Upload new image</span>
+                                       </div>
                                    </div>
-                               </div>
+                               )}
+                               
+                               {previewImage && (
+                                   <p className="text-xs text-emerald-500 text-center">Using stored profile image</p>
+                               )}
                           </div>
 
                           {/* Card Preview */}

@@ -7,6 +7,7 @@ export interface User {
   token?: string; // Auth token from Backend
   isAdmin?: boolean; // New Admin Flag
   address?: string; // Added for Statement
+  profileImage?: string; // Vercel Blob URL
 }
 
 export interface MemberFormData {

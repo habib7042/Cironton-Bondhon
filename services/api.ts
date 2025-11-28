@@ -1,4 +1,5 @@
 
+
 import { User, Transaction, MemberFormData } from '../types';
 
 const API_URL = '/api'; // Relative path for Next.js API routes
@@ -8,14 +9,16 @@ const MOCK_USER = {
   id: 'mock-user-1',
   name: 'Shakib Al Hasan',
   balance: '12500.00',
-  isAdmin: false
+  isAdmin: false,
+  profileImage: ''
 };
 
 const MOCK_ADMIN = {
   id: 'mock-admin-1',
   name: 'System Admin',
   balance: '0.00',
-  isAdmin: true
+  isAdmin: true,
+  profileImage: ''
 };
 
 let MOCK_TRANSACTIONS = [
@@ -96,7 +99,8 @@ export const api = {
                 phoneNumber, 
                 balance: parseFloat(MOCK_USER.balance), 
                 token: 'mock-token-demo', 
-                isAdmin: false 
+                isAdmin: false,
+                profileImage: MOCK_USER.profileImage
             };
         }
     }
@@ -129,7 +133,8 @@ export const api = {
         phoneNumber: phoneNumber,
         balance: data.user.balance,
         token: data.token,
-        isAdmin: data.user.isAdmin
+        isAdmin: data.user.isAdmin,
+        profileImage: data.user.profileImage
       };
     } catch (error: any) {
       
@@ -149,7 +154,8 @@ export const api = {
             phoneNumber: phoneNumber,
             balance: parseFloat(MOCK_USER.balance),
             token: 'mock-token-demo', 
-            isAdmin: false
+            isAdmin: false,
+            profileImage: MOCK_USER.profileImage
           };
       }
       throw error;
@@ -193,22 +199,15 @@ export const api = {
     }
   },
 
-  // Add a specific method to check recipient name
   checkRecipient: async (token: string, phoneNumber: string) => {
       await delay(600);
       
       if (token.startsWith('mock-')) {
           const member = MOCK_MEMBERS_LIST.find(m => m.phoneNumber === phoneNumber);
           if (member) return { name: member.name };
-          
-          // Simulate finding random names for other numbers in demo
           if (phoneNumber === '01700000000') return { name: 'Demo Receiver' };
-          
           throw new Error("Recipient not found");
       }
-
-      // For real API, you would call an endpoint here
-      // For now, fallback to error or mock
       throw new Error("Recipient lookup failed");
   },
 
@@ -249,19 +248,12 @@ export const api = {
   transferMoney: async (token: string, recipientPhone: string, amount: number, pin: string) => {
     await delay(1000); // Simulate network
 
-    // Mock PIN Verification (In real app, this goes to backend)
-    if (pin !== '1234') {
-        throw new Error('Incorrect PIN');
-    }
+    if (pin !== '1234') throw new Error('Incorrect PIN');
 
     if (token.startsWith('mock-')) {
-        // Check balance
         const currentBalance = parseFloat(MOCK_USER.balance);
-        if (currentBalance < amount) {
-            throw new Error('Insufficient balance');
-        }
+        if (currentBalance < amount) throw new Error('Insufficient balance');
 
-        // Deduct balance mock immediately so Dashboard updates
         const newBalance = (currentBalance - amount).toFixed(2);
         MOCK_USER.balance = newBalance;
         
@@ -275,12 +267,10 @@ export const api = {
             userId: MOCK_USER.id,
             recipientPhone: recipientPhone
         };
-        
         MOCK_TRANSACTIONS.unshift(newTx as any);
         return newTx;
     }
     
-    // Real backend implementation would go here
     throw new Error("Transfer service unavailable (Mock Mode Only)");
   },
 
@@ -306,18 +296,14 @@ export const api = {
           const txIndex = MOCK_PENDING_REQUESTS.findIndex(t => t.id.toString() === transactionId);
           if (txIndex === -1) return { success: false };
           const tx = MOCK_PENDING_REQUESTS[txIndex];
-
           const userTx = MOCK_TRANSACTIONS.find(t => t.id === tx.id);
 
           if (action === 'APPROVE') {
               if (userTx) userTx.status = 'APPROVED';
-              
-              // Mock Balance Update
               if (tx.userId === MOCK_USER.id) {
                   const amt = typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount;
                   if (tx.transaction_type === 'DEPOSIT') {
                       MOCK_USER.balance = (parseFloat(MOCK_USER.balance) + amt).toFixed(2);
-                      // Update member list too
                       const member = MOCK_MEMBERS_LIST.find(m => m.id === tx.userId);
                       if (member) member.balance += amt;
                   } else {
@@ -325,19 +311,10 @@ export const api = {
                       const member = MOCK_MEMBERS_LIST.find(m => m.id === tx.userId);
                       if (member) member.balance -= amt;
                   }
-              } else {
-                   // For other mock users
-                   const member = MOCK_MEMBERS_LIST.find(m => m.id === tx.userId);
-                   if (member) {
-                       const amt = typeof tx.amount === 'string' ? parseFloat(tx.amount) : tx.amount;
-                       if (tx.transaction_type === 'DEPOSIT') member.balance += amt;
-                       else member.balance -= amt;
-                   }
               }
           } else {
                if (userTx) userTx.status = 'REJECTED';
           }
-
           MOCK_PENDING_REQUESTS.splice(txIndex, 1);
           return { success: true };
       }
@@ -357,8 +334,6 @@ export const api = {
   addMember: async (token: string, data: MemberFormData) => {
     if (token === 'mock-admin-token') {
         await delay(1000);
-        console.log("Mock Member Added:", data);
-        // Add to mock list dynamically
         MOCK_MEMBERS_LIST.push({
             id: `mock-user-${Math.random()}`,
             balance: 0,
@@ -375,7 +350,6 @@ export const api = {
         },
         body: JSON.stringify(data)
     });
-
     if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || 'Failed to add member');
@@ -384,10 +358,7 @@ export const api = {
   },
 
   getMembers: async (token: string) => {
-    if (token === 'mock-admin-token') {
-        await delay(600);
-        return MOCK_MEMBERS_LIST;
-    }
+    if (token === 'mock-admin-token') return MOCK_MEMBERS_LIST;
     try {
         const response = await fetch(`${API_URL}/admin/members`, {
             headers: { 'Authorization': `Token ${token}` }
@@ -395,33 +366,43 @@ export const api = {
         if (!response.ok) throw new Error('Failed to fetch members');
         return await response.json();
     } catch (e) {
-        console.warn("Using mock members data due to fetch error");
         return MOCK_MEMBERS_LIST;
     }
   },
 
   getAdminStatement: async (token: string) => {
     if (token === 'mock-admin-token') {
-        await delay(800);
-        // Generate a mix of transactions for the report
         return [
             ...MOCK_TRANSACTIONS.map(t => ({...t, userName: MOCK_USER.name, phoneNumber: '01712345678'})),
             ...MOCK_PENDING_REQUESTS.map(t => ({...t, userName: t.userName})),
-            // Add some historical mock data
-            { id: 901, transaction_type: 'DEPOSIT', amount: 5000, status: 'APPROVED', created_at: new Date('2023-01-15').toISOString(), userName: 'Tamim Iqbal', phoneNumber: '01700000001' },
-            { id: 902, transaction_type: 'WITHDRAW', amount: 1000, status: 'APPROVED', created_at: new Date('2023-02-10').toISOString(), userName: 'Tamim Iqbal', phoneNumber: '01700000001' },
         ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
+    const response = await fetch(`${API_URL}/admin/statement`, {
+        headers: { 'Authorization': `Token ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch statement');
+    return await response.json();
+  },
 
-    try {
-        const response = await fetch(`${API_URL}/admin/statement`, {
-            headers: { 'Authorization': `Token ${token}` }
-        });
-        if (!response.ok) throw new Error('Failed to fetch statement');
-        return await response.json();
-    } catch (e) {
-        console.error(e);
-        throw new Error("Failed to generate statement");
+  uploadAvatar: async (token: string, file: File) => {
+    if (token.startsWith('mock-')) {
+        await delay(1500);
+        // Return a dummy placeholder in mock mode
+        const mockUrl = "https://ui-avatars.com/api/?name=" + MOCK_USER.name + "&background=random";
+        MOCK_USER.profileImage = mockUrl;
+        return { url: mockUrl };
     }
+
+    const response = await fetch(`/api/user/avatar?filename=${file.name}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Token ${token}` },
+      body: file,
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    return await response.json();
   }
 };

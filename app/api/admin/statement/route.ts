@@ -1,6 +1,7 @@
-
 import { NextResponse } from 'next/server';
-import pool from '@/lib/db';
+import connectDB from '@/lib/db';
+import User from '@/models/User';
+import Transaction from '@/models/Transaction';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,37 +12,27 @@ export async function GET(request: Request) {
 
     if (!adminId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Verify Admin Status
-    const adminCheck = await pool.query('SELECT is_admin FROM users WHERE id = $1', [adminId]);
-    if (!adminCheck.rows[0]?.is_admin) {
+    await connectDB();
+
+    const adminUser = await User.findById(adminId);
+    if (!adminUser?.isAdmin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Fetch all transactions joined with user info
-    const result = await pool.query(`
-      SELECT 
-        t.id, 
-        t.transaction_type, 
-        t.amount, 
-        t.status, 
-        t.created_at, 
-        u.name as user_name, 
-        u.phone_number,
-        t.user_id
-      FROM transactions t
-      JOIN users u ON t.user_id = u.id
-      ORDER BY t.created_at DESC
-    `);
+    // Use Population for SQL JOIN equivalent
+    const transactions = await Transaction.find()
+      .populate('userId', 'name phoneNumber')
+      .sort({ createdAt: -1 });
 
-    return NextResponse.json(result.rows.map(row => ({
-        id: row.id,
-        transaction_type: row.transaction_type,
-        amount: parseFloat(row.amount),
-        status: row.status,
-        created_at: row.created_at,
-        userName: row.user_name,
-        phoneNumber: row.phone_number,
-        userId: row.user_id
+    return NextResponse.json(transactions.map((t) => ({
+        id: t._id.toString(),
+        transaction_type: t.transaction_type,
+        amount: t.amount,
+        status: t.status,
+        created_at: t.createdAt,
+        userName: (t.userId as any)?.name || 'Unknown',
+        phoneNumber: (t.userId as any)?.phoneNumber || '-',
+        userId: (t.userId as any)?._id.toString()
     })));
 
   } catch (error) {
