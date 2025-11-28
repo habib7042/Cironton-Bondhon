@@ -1,10 +1,3 @@
-import { Pool } from 'pg';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false, // Neon usually requires SSL
-  },
-});
-
-export default pool;
+// This file is deprecated. The project has migrated to MongoDB.
+// Please use '@/lib/db' for database connections.
+export default {};
