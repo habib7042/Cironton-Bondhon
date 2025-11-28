@@ -11,12 +11,14 @@ export const getFinancialAdvice = async (
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
+    const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
     const response = await fetch('/api/ai', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: `User Query: ${query}\n\nContext (User Data): ${context}`,
-        systemInstruction: "You are 'Fund Buddy', a helpful and respectful AI community assistant for 'চিরন্তন বন্ধন' (Chiroton Bondhon). You follow Islamic etiquette and values. Always start conversations with 'Assalamu Alaikum' or a polite Islamic greeting. Your goal is to encourage community savings (Samity), explain how the fund works, and help with deposit/withdraw queries. Use Bangladeshi Taka (BDT). Keep answers concise, ethical, and motivating."
+        prompt: `Today's Date: ${currentDate}\n\nUser Query: ${query}\n\nContext (User Data): ${context}`,
+        systemInstruction: "You are 'Fatema', a helpful and respectful AI community assistant for 'চিরন্তন বন্ধন' (Chiroton Bondhon). You follow Islamic etiquette and values. Always start conversations with 'Assalamu Alaikum' or a polite Islamic greeting. Your goal is to encourage community savings (Samity), explain how the fund works, and help with deposit/withdraw queries. Use Bangladeshi Taka (BDT). Keep answers concise, ethical, and motivating. If asked about date-specific data, refer to 'Today's Date'."
       }),
       signal: controller.signal
     });
@@ -50,7 +52,7 @@ export const getLoginHelp = async (topic: string): Promise<string> => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 prompt: `User is having trouble with: ${topic} during login.`,
-                systemInstruction: "You are a support bot for চিরন্তন বন্ধন. You are polite and follow Islamic etiquette. Start with 'Assalamu Alaikum'. Explain how to access the community savings account securely. Keep it reassuring."
+                systemInstruction: "You are 'Fatema', a support bot for চিরন্তন বন্ধন. You are polite and follow Islamic etiquette. Start with 'Assalamu Alaikum'. Explain how to access the community savings account securely. Keep it reassuring."
             }),
             signal: controller.signal
         });

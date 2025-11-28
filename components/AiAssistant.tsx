@@ -17,7 +17,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ contextData = '', mode
       role: 'model', 
       text: mode === 'LOGIN_HELP' 
         ? "Assalamu Alaikum! Having trouble logging in? I can help you access your account securely." 
-        : "Assalamu Alaikum! I'm Shonali. Ask me about your savings or for financial advice." 
+        : "Assalamu Alaikum! I'm Fatema. Ask me about your savings or for financial advice." 
     }
   ]);
   const [isThinking, setIsThinking] = useState(false);
@@ -58,7 +58,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ contextData = '', mode
               <div className="p-1.5 bg-nova-accent/20 rounded-lg">
                 <Sparkles size={16} className="text-nova-accent" />
               </div>
-              <span className="font-medium text-sm text-white">Shonali Assistant</span>
+              <span className="font-medium text-sm text-white">Fatema Assistant</span>
             </div>
             <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-white">
               <X size={18} />

@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Transaction } from '../types';
 import { ArrowUpRight, ArrowDownLeft, PieChart, Search, Bell, ChevronRight, Users, TrendingUp, Clock, ShieldCheck, LayoutDashboard, Loader2, Send, IdCard, Wallet, FileText, UserCog, Camera, Settings } from 'lucide-react';
@@ -166,11 +167,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user: initialUser, onLogou
   const totalMembers = 12; // Keep static or fetch from API if needed
 
   const contextForAi = `
+    Today's Date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
     User: ${user.name}
     My Contribution: ৳${user.balance.toLocaleString()}
     Group Fund Total: ৳${totalFund.toLocaleString()}
     Total Members: ${totalMembers}
-    Recent Activity: ${transactions.map(t => `${t.merchant} (${t.status})`).join(', ')}
+    Recent Activity: ${transactions.map(t => `${t.merchant} on ${t.date} (${t.status})`).join(', ')}
   `;
 
   const userActions = [
